@@ -13,8 +13,21 @@ android {
         applicationId 'org.openttd.mobile'
         minSdk 26
         targetSdk 35
-        versionCode 1
-        versionName '0.1.0'
+        // CI run number -> monotonically increasing version, so Obtainium sees updates.
+        def build = (System.getenv('GITHUB_RUN_NUMBER') ?: '0') as int
+        versionCode build
+        versionName "0.1.${build}"
+    }
+
+    // Committed dev key: stable signature across CI runners so updates install over each other.
+    // Not a release key; replace with a secret-backed key before store distribution.
+    signingConfigs {
+        debug {
+            storeFile file("${rootDir}/ci-debug.keystore")
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
     }
 
     sourceSets {

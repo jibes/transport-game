@@ -9,6 +9,9 @@ concurrency:
   group: mobile-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -39,6 +42,18 @@ jobs:
       with:
         name: android-apk
         path: os/android/app/build/outputs/apk/debug/*.apk
+
+    # One pre-release per build; Obtainium tracks these (enable "Include prereleases").
+    - name: Publish pre-release
+      if: github.event_name == 'push'
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        V="0.1.${GITHUB_RUN_NUMBER}"
+        APK="transport-mobile-${V}-arm64-v8a.apk"
+        cp os/android/app/build/outputs/apk/debug/*.apk "$APK"
+        gh release create "android-v${V}" "$APK" --prerelease --target "$GITHUB_SHA" \
+          --title "Android ${V}" --notes "Dev build from ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}. Debug-signed, arm64 only."
 
   web:
     runs-on: ubuntu-latest
