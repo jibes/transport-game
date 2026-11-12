@@ -7,7 +7,7 @@ on:
 
 concurrency:
   group: mobile-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   android:
@@ -53,7 +53,11 @@ jobs:
         cp os/emscripten/ports/liblzma.py /emsdk/upstream/emscripten/tools/ports/contrib/
         cmake -S . -B build-host -DOPTION_TOOLS_ONLY=ON
         cmake --build build-host -j "$(nproc)" --target tools
-        emcmake cmake -S . -B build-web -DHOST_BINARY_DIR=../build-host -DCMAKE_BUILD_TYPE=Release -DOPTION_USE_ASSERTS=OFF
+        emcmake cmake -S . -B build-web -DHOST_BINARY_DIR="$PWD/build-host" -DCMAKE_BUILD_TYPE=Release -DOPTION_USE_ASSERTS=OFF
+        # Bundle OpenGFX so the game starts offline (no runtime BaNaNaS download).
+        mkdir -p build-web/baseset
+        python3 -c "import urllib.request as u; u.urlretrieve('https://cdn.openttd.org/opengfx-releases/7.1/opengfx-7.1-all.zip', 'opengfx.zip')"
+        python3 -m zipfile -e opengfx.zip build-web/baseset/
         cmake --build build-web -j "$(nproc)" --target openttd
 
     - uses: actions/upload-artifact@v4
