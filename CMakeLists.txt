@@ -170,7 +170,7 @@ if(APPLE)
     find_library(QUARTZCORE_LIBRARY QuartzCore)
 endif()
 
-if(NOT EMSCRIPTEN AND NOT OPTION_DEDICATED)
+if(NOT EMSCRIPTEN AND NOT ANDROID AND NOT OPTION_DEDICATED)
     find_package(OpenGL COMPONENTS OpenGL)
 endif()
 
@@ -243,7 +243,12 @@ include_directories(${CMAKE_SOURCE_DIR}/src/3rdparty/squirrel/include)
 include(MSVCFilters)
 
 add_library(openttd_lib OBJECT ${GENERATED_SOURCE_FILES})
-add_executable(openttd WIN32)
+if(ANDROID)
+    # SDLActivity loads the game as a shared library and calls SDL_main().
+    add_library(openttd SHARED)
+else()
+    add_executable(openttd WIN32)
+endif()
 add_executable(openttd_test)
 set_target_properties(openttd PROPERTIES OUTPUT_NAME "${BINARY_NAME}")
 # All other files are added via target_sources()

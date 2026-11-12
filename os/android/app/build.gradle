@@ -1,0 +1,38 @@
+plugins {
+    id 'com.android.application'
+}
+
+// SDL3 source tree; its Java glue (org.libsdl.app) must match the native libSDL3.so version.
+def sdlSrc = project.findProperty('sdlSrc') ?: "${rootDir}/../../build-android-deps/SDL"
+
+android {
+    namespace 'org.openttd.mobile'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'org.openttd.mobile'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0'
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs += ["${sdlSrc}/android-project/app/src/main/java"]
+            // Prebuilt native libs + game data are staged by os/android/stage.sh.
+            jniLibs.srcDirs = ['src/main/jniLibs']
+            assets.srcDirs = ['src/main/assets']
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // Data files are already compressed (grf/tar) or tiny; keep them uncompressed for fast extraction.
+    androidResources {
+        noCompress += ['grf', 'tar', 'obg', 'obs', 'obm', 'lng', 'nut']
+    }
+}

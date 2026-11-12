@@ -1,0 +1,5 @@
+.gradle/
+app/build/
+app/src/main/jniLibs/
+app/src/main/assets/game/
+local.properties

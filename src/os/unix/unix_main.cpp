@@ -16,10 +16,26 @@
 #include <time.h>
 #include <signal.h>
 
+#ifdef __ANDROID__
+/* SDL_main.h renames main() to SDL_main(), which SDLActivity calls from libopenttd.so. */
+#	include <SDL3/SDL_main.h>
+#	include <SDL3/SDL_system.h>
+#	include <stdlib.h>
+#	include <unistd.h>
+#endif
+
 #include "../../safeguards.h"
 
 int CDECL main(int argc, char *argv[])
 {
+#ifdef __ANDROID__
+	/* Game data is extracted by the Java side to the internal storage path; use it as working and home dir. */
+	if (const char *dir = SDL_GetAndroidInternalStoragePath(); dir != nullptr) {
+		setenv("HOME", dir, 1);
+		if (chdir(dir) != 0) return 1;
+	}
+#endif
+
 	/* Make sure our arguments contain only valid UTF-8 characters. */
 	std::vector<std::string_view> params;
 	for (int i = 0; i < argc; ++i) {
