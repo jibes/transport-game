@@ -56,7 +56,7 @@ jobs:
         emcmake cmake -S . -B build-web -DHOST_BINARY_DIR="$PWD/build-host" -DCMAKE_BUILD_TYPE=Release -DOPTION_USE_ASSERTS=OFF
         # Bundle OpenGFX so the game starts offline (no runtime BaNaNaS download).
         mkdir -p build-web/baseset
-        python3 -c "import urllib.request as u; u.urlretrieve('https://cdn.openttd.org/opengfx-releases/7.1/opengfx-7.1-all.zip', 'opengfx.zip')"
+        curl -fsSL -o opengfx.zip https://cdn.openttd.org/opengfx-releases/7.1/opengfx-7.1-all.zip
         python3 -m zipfile -e opengfx.zip build-web/baseset/
         cmake --build build-web -j "$(nproc)" --target openttd
 
