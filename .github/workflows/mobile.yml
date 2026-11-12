@@ -75,11 +75,32 @@ jobs:
         python3 -m zipfile -e opengfx.zip build-web/baseset/
         cmake --build build-web -j "$(nproc)" --target openttd
 
+    - name: Stage site
+      run: |
+        mkdir -p site
+        cp build-web/openttd.html site/index.html
+        cp build-web/openttd.js build-web/openttd.wasm build-web/openttd.data site/
+
     - uses: actions/upload-artifact@v4
       with:
         name: web
-        path: |
-          build-web/openttd.html
-          build-web/openttd.js
-          build-web/openttd.wasm
-          build-web/openttd.data
+        path: site
+
+    - uses: actions/upload-pages-artifact@v3
+      with:
+        path: site
+
+  # Requires repo Settings -> Pages -> Source: "GitHub Actions".
+  pages:
+    needs: web
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+    - id: deploy
+      uses: actions/deploy-pages@v4
