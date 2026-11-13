@@ -45,6 +45,10 @@
 
 #include "table/strings.h"
 
+#ifdef WITH_MOBILE_GUI
+#	include "mobile/touch_input.h"
+#endif
+
 #include "safeguards.h"
 
 static Point _drag_delta; ///< delta between mouse cursor and upper left corner of dragged window
@@ -3531,10 +3535,24 @@ static int PositionWindow(Window *w, WindowClass clss, int setting)
 	if (w == nullptr) return 0;
 
 	int old_left = w->left;
+#ifdef WITH_MOBILE_GUI
+	/* Keep bars clear of camera cutouts and gesture areas; the map itself still uses the full screen. */
+	const Touch::SafeInsets &safe = Touch::GetSafeInsets();
+	int area_left = safe.left;
+	int area_width = _screen.width - safe.left - safe.right;
+	if (clss == WindowClass::MainToolbar) {
+		w->top = safe.top;
+	} else if (clss == WindowClass::Statusbar) {
+		w->top = _screen.height - safe.bottom - w->height;
+	}
+#else
+	const int area_left = 0;
+	const int area_width = _screen.width;
+#endif
 	switch (setting) {
-		case 1:  w->left = (_screen.width - w->width) / 2; break;
-		case 2:  w->left = _screen.width - w->width; break;
-		default: w->left = 0; break;
+		case 1:  w->left = area_left + (area_width - w->width) / 2; break;
+		case 2:  w->left = area_left + area_width - w->width; break;
+		default: w->left = area_left; break;
 	}
 	if (w->viewport != nullptr) w->viewport->left += w->left - old_left;
 	AddDirtyBlock(0, w->top, _screen.width, w->top + w->height); // invalidate the whole row

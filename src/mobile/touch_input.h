@@ -23,7 +23,14 @@ struct FingerEvent {
 	float y; ///< Screen pixels.
 };
 
+/** Screen insets (pixels) not covered by camera cutouts, rounded corners or gesture bars. */
+struct SafeInsets {
+	int left = 0, top = 0, right = 0, bottom = 0;
+};
+
 void Init(float density);
+void SetSafeInsets(const SafeInsets &insets);
+const SafeInsets &GetSafeInsets();
 float GetDensity();
 int GetAutomaticScale();
 void HandleFinger(const FingerEvent &ev);

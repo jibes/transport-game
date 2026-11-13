@@ -14,6 +14,7 @@
  *  - one-finger drag  -> left-button drag (map scroll with ViewportScrollMode::MapLMB, or the active tool)
  *  - two-finger drag  -> scroll main viewport
  *  - pinch            -> zoom main viewport, stepwise with hysteresis
+ *  - release of a map scroll keeps the map moving with exponentially decaying velocity (momentum)
  */
 
 #include "../stdafx.h"
@@ -39,6 +40,9 @@ using Clock = std::chrono::steady_clock;
 static constexpr float SLOP_DP = 8.0f; ///< Movement below this is still a tap / long-press.
 static constexpr auto LONG_PRESS = std::chrono::milliseconds(450);
 static constexpr float PINCH_STEP = 1.6f; ///< Finger distance ratio per zoom level (hysteresis vs. 2x zoom).
+static constexpr float FLING_TAU_MS = 325.0f; ///< Momentum decay time constant (as Android's scroller).
+static constexpr float FLING_MIN_DP_PER_MS = 0.05f; ///< Slower releases and residual motion stop dead.
+static constexpr float VELOCITY_SMOOTHING_MS = 50.0f; ///< Time constant of the velocity estimate.
 
 struct Finger {
 	uint64_t id;
@@ -60,6 +64,16 @@ static State _state = State::Idle;
 static Clock::time_point _down_time;
 static float _pinch_ref_dist = 0.0f;
 static float _mid_x = 0.0f, _mid_y = 0.0f;
+static SafeInsets _safe_insets;
+
+/** Scroll velocity estimate (screen px per ms, direction of finger travel) and momentum state. */
+static float _vel_x = 0.0f, _vel_y = 0.0f;
+static Clock::time_point _last_move_time;
+static float _last_track_x = 0.0f, _last_track_y = 0.0f;
+static bool _flinging = false;
+static bool _drag_on_main_view = false; ///< The current one-finger drag started on the main map, not a window.
+static Clock::time_point _fling_time;
+static float _fling_rem_x = 0.0f, _fling_rem_y = 0.0f; ///< Sub-pixel remainder of momentum scrolling.
 
 void Init(float density)
 {
@@ -74,6 +88,16 @@ void Init(float density)
 static void ApplyTouchDefaults()
 {
 	_settings_client.gui.scroll_mode = ViewportScrollMode::MapLMB;
+}
+
+void SetSafeInsets(const SafeInsets &insets)
+{
+	_safe_insets = insets;
+}
+
+const SafeInsets &GetSafeInsets()
+{
+	return _safe_insets;
 }
 
 float GetDensity()
@@ -130,6 +154,51 @@ static void HideCursor()
 	_cursor.in_window = false;
 }
 
+/** Start velocity tracking at a finger position. */
+static void TrackStart(float x, float y)
+{
+	_vel_x = _vel_y = 0.0f;
+	_last_track_x = x;
+	_last_track_y = y;
+	_last_move_time = Clock::now();
+}
+
+/** Feed a new position into the smoothed velocity estimate. */
+static void Track(float x, float y)
+{
+	auto now = Clock::now();
+	float dt = std::chrono::duration<float, std::milli>(now - _last_move_time).count();
+	if (dt <= 0.0f) return;
+	float alpha = 1.0f - std::exp(-dt / VELOCITY_SMOOTHING_MS);
+	_vel_x += alpha * ((x - _last_track_x) / dt - _vel_x);
+	_vel_y += alpha * ((y - _last_track_y) / dt - _vel_y);
+	_last_track_x = x;
+	_last_track_y = y;
+	_last_move_time = now;
+}
+
+/** Move the main viewport so its content follows a finger displacement of (dx, dy) screen pixels. */
+static void ScrollMainViewport(int dx, int dy)
+{
+	Window *w = GetMainWindow();
+	if (w == nullptr || w->viewport == nullptr || (dx == 0 && dy == 0)) return;
+	w->viewport->follow_vehicle = VehicleID::Invalid();
+	w->viewport->dest_scrollpos_x -= ScaleByZoom(dx, w->viewport->zoom);
+	w->viewport->dest_scrollpos_y -= ScaleByZoom(dy, w->viewport->zoom);
+}
+
+/** Begin momentum scrolling if the finger was still moving when lifted. */
+static void StartFling()
+{
+	/* A finger that paused before lifting has no momentum, whatever the old estimate says. */
+	float idle = std::chrono::duration<float, std::milli>(Clock::now() - _last_move_time).count();
+	if (idle > 3 * VELOCITY_SMOOTHING_MS) return;
+	if (std::hypot(_vel_x, _vel_y) < FLING_MIN_DP_PER_MS * _density * 4) return;
+	_flinging = true;
+	_fling_time = Clock::now();
+	_fling_rem_x = _fling_rem_y = 0.0f;
+}
+
 static float Distance(const Finger &a, const Finger &b)
 {
 	return std::hypot(a.x - b.x, a.y - b.y);
@@ -143,6 +212,7 @@ static void BeginMulti()
 	_pinch_ref_dist = std::max(1.0f, Distance(a, b));
 	_mid_x = (a.x + b.x) / 2;
 	_mid_y = (a.y + b.y) / 2;
+	TrackStart(_mid_x, _mid_y);
 }
 
 static void UpdateMulti()
@@ -151,18 +221,15 @@ static void UpdateMulti()
 	float mid_x = (a.x + b.x) / 2;
 	float mid_y = (a.y + b.y) / 2;
 
+	Track(mid_x, mid_y);
 	Window *w = GetMainWindow();
 	if (w != nullptr && w->viewport != nullptr) {
 		/* Pan: the map follows the fingers. */
 		int dx = static_cast<int>(mid_x - _mid_x);
 		int dy = static_cast<int>(mid_y - _mid_y);
-		if (dx != 0 || dy != 0) {
-			w->viewport->follow_vehicle = VehicleID::Invalid();
-			w->viewport->dest_scrollpos_x -= ScaleByZoom(dx, w->viewport->zoom);
-			w->viewport->dest_scrollpos_y -= ScaleByZoom(dy, w->viewport->zoom);
-			_mid_x += dx;
-			_mid_y += dy;
-		}
+		ScrollMainViewport(dx, dy);
+		_mid_x += dx;
+		_mid_y += dy;
 
 		/* Pinch: one zoom level per PINCH_STEP change in finger distance, centred on the fingers. */
 		float ratio = Distance(a, b) / _pinch_ref_dist;
@@ -180,8 +247,10 @@ void HandleFinger(const FingerEvent &ev)
 	switch (ev.type) {
 		case FingerEvent::Type::Down:
 			ApplyTouchDefaults();
+			_flinging = false; // touching the map stops momentum, as on any phone
 			_fingers.push_back({ev.finger_id, ev.x, ev.y, ev.x, ev.y});
 			if (_fingers.size() == 1) {
+				TrackStart(ev.x, ev.y);
 				_state = State::Pending;
 				_down_time = Clock::now();
 				MoveCursor(ev.x, ev.y);
@@ -200,12 +269,14 @@ void HandleFinger(const FingerEvent &ev)
 					if (std::hypot(f->x - f->start_x, f->y - f->start_y) > SLOP_DP * _density) {
 						/* Press at the start point so drags begin where the finger landed. */
 						MoveCursor(f->start_x, f->start_y);
+						_drag_on_main_view = FindWindowFromPt(static_cast<int>(f->start_x), static_cast<int>(f->start_y)) == GetMainWindow();
 						Press(ControlInput::Left);
 						_state = State::Dragging;
 						MoveCursor(f->x, f->y);
 					}
 					break;
 				case State::Dragging:
+					Track(f->x, f->y);
 					MoveCursor(f->x, f->y);
 					break;
 				case State::Multi:
@@ -225,9 +296,13 @@ void HandleFinger(const FingerEvent &ev)
 			_fingers.erase(_fingers.begin() + (f - _fingers.data()));
 
 			if (_fingers.empty()) {
+				/* Momentum only for map scrolls of the main view, not for tool drags (e.g. rail building). */
+				bool map_scroll = (_state == State::Dragging && _scrolling_viewport && _drag_on_main_view) ||
+						_state == State::Multi;
 				if (ev.type == FingerEvent::Type::Up) {
 					if (_state == State::Pending) Click(ControlInput::Left, x, y);
 					if (_state == State::Dragging) Release(ControlInput::Left);
+					if (map_scroll) StartFling();
 				} else if (_state == State::Dragging) {
 					Release(ControlInput::Left);
 				}
@@ -240,9 +315,36 @@ void HandleFinger(const FingerEvent &ev)
 	}
 }
 
-/** Called every input poll; fires the long-press, which has no event of its own. */
+/** Advance momentum scrolling. */
+static void UpdateFling()
+{
+	if (!_flinging) return;
+	auto now = Clock::now();
+	float dt = std::chrono::duration<float, std::milli>(now - _fling_time).count();
+	_fling_time = now;
+	if (dt <= 0.0f) return;
+
+	float decay = std::exp(-dt / FLING_TAU_MS);
+	_vel_x *= decay;
+	_vel_y *= decay;
+	if (std::hypot(_vel_x, _vel_y) < FLING_MIN_DP_PER_MS * _density) {
+		_flinging = false;
+		return;
+	}
+
+	_fling_rem_x += _vel_x * dt;
+	_fling_rem_y += _vel_y * dt;
+	int dx = static_cast<int>(_fling_rem_x);
+	int dy = static_cast<int>(_fling_rem_y);
+	_fling_rem_x -= dx;
+	_fling_rem_y -= dy;
+	ScrollMainViewport(dx, dy);
+}
+
+/** Called every input poll: momentum, and the long-press, which has no event of its own. */
 void Update()
 {
+	UpdateFling();
 	if (_state != State::Pending || _fingers.size() != 1) return;
 	if (Clock::now() - _down_time < LONG_PRESS) return;
 	const Finger &f = _fingers[0];

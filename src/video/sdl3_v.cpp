@@ -184,6 +184,30 @@ static uint FindStartupDisplay(uint startup_display)
  * @param h The new height of the window.
  * @param force Whether to force full reallocation, instead of not reallocating when size did not change.
  */
+#ifdef WITH_MOBILE_GUI
+/**
+ * Pass SDL's safe area (outside cutouts, rounded corners, gesture bars) to the mobile GUI and
+ * re-place the bars. SDL reports it in window coordinates; the backing store is in pixels.
+ */
+static void UpdateSafeArea(SDL_Window *window)
+{
+	SDL_Rect safe;
+	int win_w, win_h;
+	if (!SDL_GetWindowSafeArea(window, &safe) || !SDL_GetWindowSize(window, &win_w, &win_h) || win_w <= 0 || win_h <= 0) return;
+	float sx = static_cast<float>(_screen.width) / win_w;
+	float sy = static_cast<float>(_screen.height) / win_h;
+	Touch::SafeInsets insets;
+	insets.left = static_cast<int>(safe.x * sx);
+	insets.top = static_cast<int>(safe.y * sy);
+	insets.right = static_cast<int>((win_w - safe.x - safe.w) * sx);
+	insets.bottom = static_cast<int>((win_h - safe.y - safe.h) * sy);
+	Touch::SetSafeInsets(insets);
+	PositionMainToolbar(nullptr);
+	PositionStatusbar(nullptr);
+	MarkWholeScreenDirty();
+}
+#endif
+
 void VideoDriver_SDL_Base::ClientSizeChanged(int w, int h, bool force)
 {
 	/* Allocate backing store of the new size. */
@@ -194,7 +218,12 @@ void VideoDriver_SDL_Base::ClientSizeChanged(int w, int h, bool force)
 
 		GameSizeChanged();
 	}
+#ifdef WITH_MOBILE_GUI
+	/* Rotation changes both the screen size and the cutout position. */
+	if (this->sdl_window != nullptr) UpdateSafeArea(this->sdl_window);
+#endif
 }
+
 
 bool VideoDriver_SDL_Base::CreateMainWindow(uint w, uint h, uint flags)
 {
@@ -629,6 +658,12 @@ bool VideoDriver_SDL_Base::PollEvent()
 			}
 			break;
 		}
+
+#ifdef WITH_MOBILE_GUI
+		case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
+			UpdateSafeArea(this->sdl_window);
+			break;
+#endif
 
 		case SDL_EVENT_WINDOW_EXPOSED:
 			/* Force a redraw of the entire screen. */
