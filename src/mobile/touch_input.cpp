@@ -26,6 +26,8 @@
 #include "../zoom_func.h"
 #include "../settings_type.h"
 #include "../vehicle_type.h"
+#include "../widget_type.h"
+#include "../core/math_func.hpp"
 #include "mobile_bar_gui.h"
 
 #include <chrono>
@@ -44,6 +46,7 @@ static constexpr float PINCH_STEP = 1.6f; ///< Finger distance ratio per zoom le
 static constexpr float FLING_TAU_MS = 325.0f; ///< Momentum decay time constant (as Android's scroller).
 static constexpr float FLING_MIN_DP_PER_MS = 0.05f; ///< Slower releases and residual motion stop dead.
 static constexpr float VELOCITY_SMOOTHING_MS = 50.0f; ///< Time constant of the velocity estimate.
+static constexpr int SNAP_RADIUS = 12; ///< GUI units (= dp at the mobile scale) a tap may miss a control by.
 
 struct Finger {
 	uint64_t id;
@@ -168,8 +171,57 @@ static void Release(ControlInput button)
 	HandleMouseEvents();
 }
 
+/** Is this a control a tap should land on (as opposed to background, text or frames)? */
+static bool IsTapTarget(const NWidgetCore *nw)
+{
+	if (nw == nullptr || nw->GetIndex() == INVALID_WIDGET || nw->IsDisabled()) return false;
+	if ((nw->type & WWB_PUSHBUTTON) != 0) return true;
+	switch (nw->type & WWT_MASK) {
+		case WWT_IMGBTN: case WWT_IMGBTN_2: case WWT_ARROWBTN:
+		case WWT_TEXTBTN: case WWT_TEXTBTN_2: case WWT_BOOLBTN: case WWT_IMGTEXTBTN:
+		case WWT_CLOSEBOX: case WWT_DROPDOWN: case WWT_EDITBOX: case NWID_BUTTON_DROPDOWN:
+			return true;
+		default:
+			return false;
+	}
+}
+
+/**
+ * Many controls are far smaller than a fingertip. A tap that lands on a non-interactive spot of a
+ * window is moved to the nearest control within SNAP_RADIUS, so adjacent tiny buttons (e.g. the
+ * 1..7 platform selectors) are hit by whichever is closest instead of not at all.
+ */
+static void SnapToControl(float &x, float &y)
+{
+	int px = static_cast<int>(x), py = static_cast<int>(y);
+	Window *w = FindWindowFromPt(px, py);
+	if (w == nullptr || w == GetMainWindow() || w->nested_root == nullptr) return;
+	if (IsTapTarget(w->nested_root->GetWidgetFromPos(px - w->left, py - w->top))) return;
+
+	int best = ScaleGUITrad(SNAP_RADIUS) + 1;
+	int best_x = px, best_y = py;
+	for (const auto &[id, base] : w->widget_lookup) {
+		const NWidgetCore *nw = dynamic_cast<const NWidgetCore *>(base);
+		if (!IsTapTarget(nw)) continue;
+		Rect r = nw->GetCurrentRect().Translate(w->left, w->top);
+		if (r.Width() <= 0 || r.Height() <= 0) continue;
+		int cx = Clamp(px, r.left, r.right);
+		int cy = Clamp(py, r.top, r.bottom);
+		int d = std::max(std::abs(cx - px), std::abs(cy - py));
+		if (d >= best) continue;
+		/* Hidden alternatives in selection containers keep stale rects; only accept what is really there. */
+		if (w->nested_root->GetWidgetFromPos(cx - w->left, cy - w->top) != nw) continue;
+		best = d;
+		best_x = cx;
+		best_y = cy;
+	}
+	x = static_cast<float>(best_x);
+	y = static_cast<float>(best_y);
+}
+
 static void Click(ControlInput button, float x, float y)
 {
+	SnapToControl(x, y);
 	MoveCursor(x, y);
 	Press(button);
 	Release(button);
