@@ -64,7 +64,15 @@ static float _mid_x = 0.0f, _mid_y = 0.0f;
 void Init(float density)
 {
 	_density = density > 0.0f ? density : 1.0f;
-	/* Touch has no right button to hold; dragging the map with one finger is the natural gesture. */
+}
+
+/**
+ * Touch has no right button to hold, so dragging the map with one finger must be the left button.
+ * Applied on first touch rather than in Init: the full config is loaded after the video driver
+ * starts and would overwrite it; this also leaves mouse users on the Web build untouched.
+ */
+static void ApplyTouchDefaults()
+{
 	_settings_client.gui.scroll_mode = ViewportScrollMode::MapLMB;
 }
 
@@ -171,6 +179,7 @@ void HandleFinger(const FingerEvent &ev)
 {
 	switch (ev.type) {
 		case FingerEvent::Type::Down:
+			ApplyTouchDefaults();
 			_fingers.push_back({ev.finger_id, ev.x, ev.y, ev.x, ev.y});
 			if (_fingers.size() == 1) {
 				_state = State::Pending;

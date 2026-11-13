@@ -3,6 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <!-- Phones: render at device width (no 980px desktop layout), no browser zoom; the game handles pinch itself. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <title>OpenTTD</title>
     <style>
       body {
@@ -86,6 +88,8 @@
         z-index: 2;
         /* OpenTTD draws the cursor itself */
         cursor: none !important;
+        /* Touch gestures go to the game, not to browser scroll/zoom. */
+        touch-action: none;
       }
     </style>
   </head>
