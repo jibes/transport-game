@@ -16,7 +16,8 @@ android {
         // CI run number -> monotonically increasing version, so Obtainium sees updates.
         def build = (System.getenv('GITHUB_RUN_NUMBER') ?: '0') as int
         versionCode build
-        versionName "0.1.${build}"
+        // Zero-padded so release tags sort correctly as plain text (GitHub/Obtainium ordering).
+        versionName String.format('0.2.%04d', build)
     }
 
     // Committed dev key: stable signature across CI runners so updates install over each other.

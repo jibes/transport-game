@@ -49,11 +49,11 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        V="0.1.${GITHUB_RUN_NUMBER}"
+        V="0.2.$(printf %04d "$GITHUB_RUN_NUMBER")"
         APK="transport-mobile-${V}-arm64-v8a.apk"
         cp os/android/app/build/outputs/apk/debug/*.apk "$APK"
         gh release create "android-v${V}" "$APK" --prerelease --target "$GITHUB_SHA" \
-          --title "Android ${V}" --notes "Dev build from ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}. Debug-signed, arm64 only."
+          --title "Android ${V}" --notes "Dev build from ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}. Debug-signed, arm64 + x86_64."
 
   # Install + launch on an x86_64 emulator; dump logcat and a screenshot.
   android-smoke:
