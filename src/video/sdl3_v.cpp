@@ -198,6 +198,12 @@ bool VideoDriver_SDL_Base::CreateMainWindow(uint w, uint h, uint flags)
 
 	flags |= SDL_WINDOW_RESIZABLE;
 
+#ifdef __ANDROID__
+	/* Android 15+ draws apps edge-to-edge; a windowed surface would sit under the system bars and hide
+	 * the toolbars. Fullscreen makes SDL use immersive mode, giving the game the whole display. */
+	_fullscreen = true;
+#endif
+
 	if (_fullscreen) {
 		flags |= SDL_WINDOW_FULLSCREEN;
 	}
