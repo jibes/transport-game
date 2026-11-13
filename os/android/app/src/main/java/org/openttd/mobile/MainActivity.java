@@ -49,10 +49,14 @@ public class MainActivity extends SDLActivity {
         super.onCreate(savedInstanceState);
     }
 
-    /** Native side chdirs to getFilesDir() (SDL_GetAndroidInternalStoragePath), so data lands there. */
+    /**
+     * Native side sets HOME=getFilesDir(); OpenTTD then always searches its XDG personal dir
+     * ($HOME/.local/share/openttd/) for baseset/, lang/, ai/, game/. The working dir is not searched
+     * because it equals the parent of the personal dir.
+     */
     private void extractDataIfNeeded() throws IOException {
-        File root = getFilesDir();
-        File stamp = new File(root, STAMP);
+        File root = new File(getFilesDir(), ".local/share/openttd");
+        File stamp = new File(getFilesDir(), STAMP);
         String version = currentVersion();
         if (stamp.exists() && version.equals(new String(Files.readAllBytes(stamp.toPath()), StandardCharsets.UTF_8))) return;
 
