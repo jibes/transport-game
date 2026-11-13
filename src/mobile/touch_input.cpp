@@ -26,6 +26,7 @@
 #include "../zoom_func.h"
 #include "../settings_type.h"
 #include "../vehicle_type.h"
+#include "mobile_bar_gui.h"
 
 #include <chrono>
 #include <cmath>
@@ -85,9 +86,20 @@ void Init(float density)
  * Applied on first touch rather than in Init: the full config is loaded after the video driver
  * starts and would overwrite it; this also leaves mouse users on the Web build untouched.
  */
+static bool _touch_used = false;
+
 static void ApplyTouchDefaults()
 {
 	_settings_client.gui.scroll_mode = ViewportScrollMode::MapLMB;
+	if (!_touch_used) {
+		_touch_used = true;
+		ShowMobileBar(); // no-op outside a running game; later games show it from ShowVitalWindows()
+	}
+}
+
+bool IsTouchUsed()
+{
+	return _touch_used;
 }
 
 void SetSafeInsets(const SafeInsets &insets)

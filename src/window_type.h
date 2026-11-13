@@ -743,6 +743,12 @@ enum class WindowClass : uint16_t {
 	 */
 	Help,
 
+	/**
+	 * Mobile bottom action bar (src/mobile); %Window numbers:
+	 *   - 0 = #MobileBarWidgets
+	 */
+	MobileBar,
+
 	Invalid = 0xFFFF, ///< Invalid window.
 };
 

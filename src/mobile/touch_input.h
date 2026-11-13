@@ -32,6 +32,7 @@ void Init(float density);
 void SetSafeInsets(const SafeInsets &insets);
 const SafeInsets &GetSafeInsets();
 float GetDensity();
+bool IsTouchUsed();
 int GetAutomaticScale();
 void HandleFinger(const FingerEvent &ev);
 void Update();

@@ -31,6 +31,7 @@
 
 #ifdef WITH_MOBILE_GUI
 #	include "../mobile/touch_input.h"
+#	include "../mobile/mobile_bar_gui.h"
 #endif
 
 #include "../safeguards.h"
@@ -204,6 +205,7 @@ static void UpdateSafeArea(SDL_Window *window)
 	Touch::SetSafeInsets(insets);
 	PositionMainToolbar(nullptr);
 	PositionStatusbar(nullptr);
+	RepositionMobileBar();
 	MarkWholeScreenDirty();
 }
 #endif

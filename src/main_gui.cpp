@@ -43,6 +43,11 @@
 #include "table/sprites.h"
 #include "table/strings.h"
 
+#ifdef WITH_MOBILE_GUI
+#	include "mobile/touch_input.h"
+#	include "mobile/mobile_bar_gui.h"
+#endif
+
 #include "safeguards.h"
 
 /**
@@ -583,6 +588,10 @@ void ShowVitalWindows()
 	if (_game_mode == GameMode::Editor) return;
 
 	ShowStatusBar();
+
+#ifdef WITH_MOBILE_GUI
+	if (Touch::IsTouchUsed()) ShowMobileBar();
+#endif
 }
 
 /**
