@@ -39,6 +39,10 @@
 
 #include "table/strings.h"
 
+#ifdef WITH_MOBILE_GUI
+#	include "mobile/touch_input.h"
+#endif
+
 #include "safeguards.h"
 
 
@@ -798,6 +802,9 @@ public:
 		switch (widget) {
 			case WID_O_ORDER_LIST:
 				fill.height = resize.height = GetCharacterHeight(FontSize::Normal);
+#ifdef WITH_MOBILE_GUI
+				fill.height = resize.height = std::max<uint>(resize.height, Touch::GetMinItemHeight());
+#endif
 				size.height = 6 * resize.height + padding.height;
 				break;
 
@@ -1121,7 +1128,9 @@ public:
 			/* Don't draw anything if it extends past the end of the window. */
 			if (!this->vscroll->IsVisible(i)) break;
 
-			DrawOrderString(this->vehicle, this->vehicle->GetOrder(i), i, y, i == this->selected_order, false, ir.left, middle, ir.right);
+			/* Centre text vertically; rows may be taller than a line (touch). */
+			int text_y = y + (line_height - GetCharacterHeight(FontSize::Normal)) / 2;
+			DrawOrderString(this->vehicle, this->vehicle->GetOrder(i), i, text_y, i == this->selected_order, false, ir.left, middle, ir.right);
 			y += line_height;
 
 			i++;
@@ -1129,7 +1138,7 @@ public:
 
 		if (this->vscroll->IsVisible(i)) {
 			StringID str = this->vehicle->IsOrderListShared() ? STR_ORDERS_END_OF_SHARED_ORDERS : STR_ORDERS_END_OF_ORDERS;
-			DrawString(rtl ? ir.left : middle, rtl ? middle : ir.right, y, str, (i == this->selected_order) ? TextColour::White : TextColour::Black);
+			DrawString(rtl ? ir.left : middle, rtl ? middle : ir.right, y + (line_height - GetCharacterHeight(FontSize::Normal)) / 2, str, (i == this->selected_order) ? TextColour::White : TextColour::Black);
 		}
 	}
 

@@ -45,6 +45,10 @@
 
 #include "table/strings.h"
 
+#ifdef WITH_MOBILE_GUI
+#	include "mobile/touch_input.h"
+#endif
+
 #include "safeguards.h"
 
 /**
@@ -54,7 +58,11 @@
  */
 uint GetEngineListHeight(VehicleType type)
 {
-	return std::max<uint>(GetCharacterHeight(FontSize::Normal) + WidgetDimensions::scaled.matrix.Vertical(), GetVehicleImageCellSize(type, EngineImageType::Purchase).height);
+	uint height = std::max<uint>(GetCharacterHeight(FontSize::Normal) + WidgetDimensions::scaled.matrix.Vertical(), GetVehicleImageCellSize(type, EngineImageType::Purchase).height);
+#ifdef WITH_MOBILE_GUI
+	height = std::max<uint>(height, Touch::GetMinItemHeight()); // finger-sized rows on touch
+#endif
+	return height;
 }
 
 static constexpr std::initializer_list<NWidgetPart> _nested_build_vehicle_widgets = {
