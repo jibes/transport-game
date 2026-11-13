@@ -36,7 +36,7 @@ jobs:
     - name: Build APK
       run: |
         export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME"
-        os/android/build.sh arm64-v8a
+        os/android/build.sh arm64-v8a x86_64
 
     - uses: actions/upload-artifact@v4
       with:
@@ -54,6 +54,47 @@ jobs:
         cp os/android/app/build/outputs/apk/debug/*.apk "$APK"
         gh release create "android-v${V}" "$APK" --prerelease --target "$GITHUB_SHA" \
           --title "Android ${V}" --notes "Dev build from ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}. Debug-signed, arm64 only."
+
+  # Install + launch on an x86_64 emulator; dump logcat and a screenshot.
+  android-smoke:
+    needs: android
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: android-apk
+        path: apk
+
+    - name: Enable KVM
+      run: |
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --name-match=kvm
+
+    - uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: 34
+        arch: x86_64
+        target: google_apis
+        disable-animations: true
+        script: |
+          adb install -r apk/*.apk
+          adb logcat -c
+          adb shell am start -W -n org.openttd.mobile/.MainActivity
+          sleep 45
+          adb shell pidof org.openttd.mobile && echo "SMOKE: process alive" || echo "SMOKE: process DEAD"
+          adb exec-out screencap -p > screen.png
+          adb logcat -d > logcat.txt
+          echo "----- logcat (filtered) -----"
+          grep -E "openttd|SDL|TransportMobile|AndroidRuntime|DEBUG|libc|FATAL|crash" logcat.txt | tail -n 300 || true
+
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: android-smoke
+        path: |
+          logcat.txt
+          screen.png
 
   web:
     runs-on: ubuntu-latest

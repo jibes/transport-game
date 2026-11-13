@@ -296,6 +296,7 @@ target_link_libraries(openttd
 target_link_libraries(openttd_test PRIVATE openttd_lib)
 if(ANDROID)
     target_link_libraries(openttd_test PRIVATE log)
+    target_link_libraries(openttd log)
 endif()
 
 include(Catch)

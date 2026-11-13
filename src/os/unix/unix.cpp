@@ -23,6 +23,9 @@
 
 #ifdef WITH_SDL3
 #include <SDL3/SDL_clipboard.h>
+#	ifdef __ANDROID__
+#		include <SDL3/SDL_messagebox.h>
+#	endif
 #endif
 
 #ifdef WITH_ICONV
@@ -192,6 +195,11 @@ void ShowInfoI(std::string_view str)
 #if !defined(__APPLE__)
 void ShowOSErrorBox(std::string_view buf, bool)
 {
+#if defined(__ANDROID__) && defined(WITH_SDL3)
+	/* No terminal on Android: show a native dialog, otherwise the app just vanishes. */
+	std::string msg(buf);
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", msg.c_str(), nullptr);
+#endif
 	/* All unix systems, except OSX. Only use escape codes on a TTY. */
 	if (isatty(fileno(stderr))) {
 		fmt::print(stderr, "\033[1;31mError: {}\033[0;39m\n", buf);

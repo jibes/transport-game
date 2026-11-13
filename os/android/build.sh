@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Build Android APK: host tools -> deps (SDL3, liblzma) -> libopenttd.so -> stage data -> gradle.
-# Usage: os/android/build.sh [abi]   (env: ANDROID_NDK_HOME, ANDROID_HOME; default abi arm64-v8a)
+# Usage: os/android/build.sh [abi...]   (env: ANDROID_NDK_HOME, ANDROID_HOME; default: arm64-v8a x86_64)
 set -euo pipefail
 
-ABI="${1:-arm64-v8a}"
+ABIS=("$@")
+[ ${#ABIS[@]} -eq 0 ] && ABIS=(arm64-v8a x86_64)
 API=26
 SDL_TAG=release-3.4.2
 XZ_TAG=v5.4.6
@@ -12,11 +13,7 @@ OPENSFX=1.0.3
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 DEPS="$ROOT/build-android-deps"
-PREFIX="$DEPS/prefix-$ABI"
 NDK="${ANDROID_NDK_HOME:?set ANDROID_NDK_HOME}"
-TOOLCHAIN=(-DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake"
-           -DANDROID_ABI="$ABI" -DANDROID_PLATFORM="android-$API" -DANDROID_STL=c++_static
-           -DCMAKE_BUILD_TYPE=Release)
 JOBS="$(nproc)"
 
 mkdir -p "$DEPS"
@@ -27,8 +24,15 @@ if [ ! -f "$ROOT/build-host/src/strgen/strgen" ] && [ ! -f "$ROOT/build-host/str
 	cmake --build "$ROOT/build-host" -j "$JOBS" --target tools
 fi
 
+build_abi() {
+ABI="$1"
+PREFIX="$DEPS/prefix-$ABI"
+TOOLCHAIN=(-DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake"
+           -DANDROID_ABI="$ABI" -DANDROID_PLATFORM="android-$API" -DANDROID_STL=c++_static
+           -DCMAKE_BUILD_TYPE=Release)
+
 # 2. Dependencies.
-[ -d "$DEPS/SDL" ] || git clone --depth 1 -b "$SDL_TAG" https://github.com/libsdl-org/SDL.git "$DEPS/SDL"
+[ -d "$DEPS/SDL/.git" ] || git clone --depth 1 -b "$SDL_TAG" https://github.com/libsdl-org/SDL.git "$DEPS/SDL"
 if [ ! -f "$PREFIX/lib/libSDL3.so" ]; then
 	cmake -S "$DEPS/SDL" -B "$DEPS/build-sdl-$ABI" "${TOOLCHAIN[@]}" \
 		-DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF \
@@ -36,7 +40,7 @@ if [ ! -f "$PREFIX/lib/libSDL3.so" ]; then
 	cmake --build "$DEPS/build-sdl-$ABI" -j "$JOBS" --target install
 fi
 
-[ -d "$DEPS/xz" ] || git clone --depth 1 -b "$XZ_TAG" https://github.com/tukaani-project/xz.git "$DEPS/xz"
+[ -d "$DEPS/xz/.git" ] || git clone --depth 1 -b "$XZ_TAG" https://github.com/tukaani-project/xz.git "$DEPS/xz"
 if [ ! -f "$PREFIX/lib/liblzma.a" ]; then
 	cmake -S "$DEPS/xz" -B "$DEPS/build-xz-$ABI" "${TOOLCHAIN[@]}" \
 		-DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBUILD_TESTING=OFF \
@@ -53,13 +57,20 @@ cmake -S "$ROOT" -B "$BUILD" "${TOOLCHAIN[@]}" \
 	-DOPTION_USE_ASSERTS=OFF
 cmake --build "$BUILD" -j "$JOBS" --target openttd
 
-# 4. Stage native libs + data for gradle.
-APP="$ROOT/os/android/app/src/main"
-rm -rf "${APP:?}/jniLibs/${ABI:?}" "${APP:?}/assets/game"
-mkdir -p "$APP/jniLibs/$ABI" "$APP/assets/game/baseset" "$APP/assets/game/lang"
+# 4. Stage native libs (+ ABI-independent data, from the last ABI built).
+rm -rf "${APP:?}/jniLibs/${ABI:?}"
+mkdir -p "$APP/jniLibs/$ABI"
 cp "$PREFIX/lib/libSDL3.so" "$BUILD/libopenttd.so" "$APP/jniLibs/$ABI/"
-cp -r "$BUILD/baseset/." "$APP/assets/game/baseset/"
-cp "$BUILD"/lang/*.lng "$APP/assets/game/lang/"
+LAST_BUILD="$BUILD"
+}
+
+APP="$ROOT/os/android/app/src/main"
+for abi in "${ABIS[@]}"; do build_abi "$abi"; done
+
+rm -rf "${APP:?}/assets/game"
+mkdir -p "$APP/assets/game/baseset" "$APP/assets/game/lang"
+cp -r "$LAST_BUILD/baseset/." "$APP/assets/game/baseset/"
+cp "$LAST_BUILD"/lang/*.lng "$APP/assets/game/lang/"
 cp -r "$ROOT/bin/ai" "$ROOT/bin/game" "$APP/assets/game/"
 
 fetch_set() { # name version

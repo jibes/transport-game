@@ -33,6 +33,12 @@ public class MainActivity extends SDLActivity {
         return new String[] { "SDL3", "openttd" };
     }
 
+    /** Verbose driver/startup logging while the port is young; shows up in logcat tag "openttd". */
+    @Override
+    protected String[] getArguments() {
+        return new String[] { "-d", "driver=5,misc=3,grf=1" };
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         try {

@@ -22,6 +22,29 @@
 #	include <SDL3/SDL_system.h>
 #	include <stdlib.h>
 #	include <unistd.h>
+#	include <stdio.h>
+#	include <android/log.h>
+#	include <thread>
+
+/** Forward stdout/stderr to logcat (tag "openttd") and to last_run.log, as Android discards both. */
+static void RedirectOutputToLogcat()
+{
+	static int pfd[2];
+	if (pipe(pfd) != 0) return;
+	setvbuf(stdout, nullptr, _IOLBF, 0);
+	setvbuf(stderr, nullptr, _IONBF, 0);
+	dup2(pfd[1], STDOUT_FILENO);
+	dup2(pfd[1], STDERR_FILENO);
+	std::thread([] {
+		FILE *in = fdopen(pfd[0], "r");
+		FILE *log = fopen("last_run.log", "w");
+		char line[1024];
+		while (in != nullptr && fgets(line, sizeof(line), in) != nullptr) {
+			__android_log_write(ANDROID_LOG_INFO, "openttd", line);
+			if (log != nullptr) { fputs(line, log); fflush(log); }
+		}
+	}).detach();
+}
 #endif
 
 #include "../../safeguards.h"
@@ -34,6 +57,7 @@ int CDECL main(int argc, char *argv[])
 		setenv("HOME", dir, 1);
 		if (chdir(dir) != 0) return 1;
 	}
+	RedirectOutputToLogcat();
 #endif
 
 	/* Make sure our arguments contain only valid UTF-8 characters. */
