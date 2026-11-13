@@ -11,6 +11,9 @@
 #define DROPDOWN_TYPE_H
 
 #include "core/enum_type.hpp"
+#ifdef WITH_MOBILE_GUI
+#	include "mobile/touch_input.h"
+#endif
 #include "stringfilter_type.h"
 #include "window_type.h"
 #include "gfx_func.h"
@@ -47,7 +50,14 @@ public:
 	 * The height of this item.
 	 * @return The height.
 	 */
-	virtual uint Height() const { return 0; }
+	virtual uint Height() const
+	{
+#ifdef WITH_MOBILE_GUI
+		return Touch::GetMinItemHeight(); // finger-sized rows once touch is in use
+#else
+		return 0;
+#endif
+	}
 
 	/**
 	 * The width of this item.

@@ -102,6 +102,12 @@ bool IsTouchUsed()
 	return _touch_used;
 }
 
+/** Minimum height of list rows (dropdowns) for touch; 28 GUI units is 28dp at the mobile GUI scale. */
+uint32_t GetMinItemHeight()
+{
+	return _touch_used ? ScaleGUITrad(28) : 0;
+}
+
 void SetSafeInsets(const SafeInsets &insets)
 {
 	_safe_insets = insets;
