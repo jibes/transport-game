@@ -2,7 +2,7 @@ name: Mobile (Android + Web)
 
 on:
   push:
-    branches-ignore: [master]
+  pull_request:
   workflow_dispatch:
 
 concurrency:
@@ -45,7 +45,7 @@ jobs:
 
     # One pre-release per build; Obtainium tracks these (enable "Include prereleases").
     - name: Publish pre-release
-      if: github.event_name == 'push'
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
@@ -90,10 +90,10 @@ jobs:
       with:
         path: site
 
-  # Requires repo Settings -> Pages -> Source: "GitHub Actions".
+  # Publishing (Pages + pre-releases) only from main; other branches/PRs just build.
   pages:
     needs: web
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       pages: write
