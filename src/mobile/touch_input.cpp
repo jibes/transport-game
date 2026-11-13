@@ -57,6 +57,7 @@ enum class State : uint8_t {
 	Dragging, ///< One finger, left button held.
 	LongPressed, ///< Right click delivered; ignore until lift.
 	Multi, ///< Two or more fingers: pan/pinch.
+	ConfirmPending, ///< Construction drag finished, left button still held until Build/Cancel.
 };
 
 static float _density = 1.0f;
@@ -66,6 +67,12 @@ static Clock::time_point _down_time;
 static float _pinch_ref_dist = 0.0f;
 static float _mid_x = 0.0f, _mid_y = 0.0f;
 static SafeInsets _safe_insets;
+
+static constexpr uint64_t NO_FINGER = UINT64_MAX;
+static uint64_t _primary_id = NO_FINGER; ///< Finger driving the current one-finger gesture.
+static uint64_t _confirm_finger = NO_FINGER; ///< Finger currently pressing a Build/Cancel button.
+static ConfirmHit _confirm_hit = ConfirmHit::None;
+static float _pending_x = 0.0f, _pending_y = 0.0f; ///< Where the pending construction drag ended.
 
 /** Scroll velocity estimate (screen px per ms, direction of finger travel) and momentum state. */
 static float _vel_x = 0.0f, _vel_y = 0.0f;
@@ -260,76 +267,160 @@ static void UpdateMulti()
 	}
 }
 
+/** A construction tool is mid-drag (rail line, road, area clear, ...), as opposed to scrolling. */
+static bool IsToolDrag()
+{
+	return _special_mouse_mode == SpecialMouseMode::Sizing;
+}
+
+/** Finish a pending construction drag: build it where it ended, or drop it and keep the tool. */
+static void ResolveConfirm(bool build)
+{
+	CloseBuildConfirm();
+	if (build) {
+		MoveCursor(_pending_x, _pending_y);
+	} else {
+		VpCancelPlaceSizingDrag();
+	}
+	Release(ControlInput::Left);
+	_state = State::Idle;
+	_confirm_finger = NO_FINGER;
+	HideCursor();
+}
+
+/** First finger of a new gesture. */
+static void BeginGesture(const FingerEvent &ev)
+{
+	_fingers.push_back({ev.finger_id, ev.x, ev.y, ev.x, ev.y});
+	_primary_id = ev.finger_id;
+	TrackStart(ev.x, ev.y);
+	_state = State::Pending;
+	_down_time = Clock::now();
+	MoveCursor(ev.x, ev.y);
+}
+
+static void HandleDown(const FingerEvent &ev)
+{
+	ApplyTouchDefaults();
+	_flinging = false; // touching the map stops momentum, as on any phone
+
+	if (_state == State::ConfirmPending) {
+		if (_confirm_finger != NO_FINGER) return; // one button press at a time
+		ConfirmHit hit = GetBuildConfirmHit(static_cast<int>(ev.x), static_cast<int>(ev.y));
+		if (hit != ConfirmHit::None) {
+			_confirm_finger = ev.finger_id;
+			_confirm_hit = hit;
+			return;
+		}
+		if (FindWindowFromPt(static_cast<int>(ev.x), static_cast<int>(ev.y)) == GetMainWindow()) {
+			/* Touching the map again moves the end point of the pending selection. */
+			CloseBuildConfirm();
+			_fingers.push_back({ev.finger_id, ev.x, ev.y, ev.x, ev.y});
+			_primary_id = ev.finger_id;
+			_state = State::Dragging;
+			MoveCursor(ev.x, ev.y);
+			return;
+		}
+		/* Touching any other window abandons the pending build, then acts normally. */
+		ResolveConfirm(false);
+	}
+
+	/* Extra fingers during a construction drag would end it (and build); ignore them entirely. */
+	if (_state == State::Dragging && IsToolDrag()) return;
+
+	if (_fingers.empty()) {
+		BeginGesture(ev);
+		return;
+	}
+	_fingers.push_back({ev.finger_id, ev.x, ev.y, ev.x, ev.y});
+	if (_fingers.size() == 2) BeginMulti();
+}
+
+static void HandleMotion(const FingerEvent &ev)
+{
+	Finger *f = FindFinger(ev.finger_id);
+	if (f == nullptr) return;
+	f->x = ev.x;
+	f->y = ev.y;
+	switch (_state) {
+		case State::Pending:
+			if (std::hypot(f->x - f->start_x, f->y - f->start_y) > SLOP_DP * _density) {
+				/* Press at the start point so drags begin where the finger landed. */
+				MoveCursor(f->start_x, f->start_y);
+				_drag_on_main_view = FindWindowFromPt(static_cast<int>(f->start_x), static_cast<int>(f->start_y)) == GetMainWindow();
+				Press(ControlInput::Left);
+				_state = State::Dragging;
+				MoveCursor(f->x, f->y);
+			}
+			break;
+		case State::Dragging:
+			if (f->id != _primary_id) break;
+			Track(f->x, f->y);
+			MoveCursor(f->x, f->y);
+			break;
+		case State::Multi:
+			if (_fingers.size() >= 2) UpdateMulti();
+			break;
+		default:
+			break;
+	}
+}
+
+static void HandleUp(const FingerEvent &ev)
+{
+	bool cancelled = ev.type == FingerEvent::Type::Cancel;
+
+	if (ev.finger_id == _confirm_finger) {
+		/* A button counts only if the finger is still on it when lifted. */
+		ConfirmHit hit = GetBuildConfirmHit(static_cast<int>(ev.x), static_cast<int>(ev.y));
+		_confirm_finger = NO_FINGER;
+		if (!cancelled && hit == _confirm_hit) ResolveConfirm(hit == ConfirmHit::Build);
+		return;
+	}
+
+	Finger *f = FindFinger(ev.finger_id);
+	if (f == nullptr) return;
+	float x = f->x, y = f->y;
+	_fingers.erase(_fingers.begin() + (f - _fingers.data()));
+	if (!_fingers.empty()) return; // lifting one of several fingers keeps the gesture until all are up
+
+	if (_state == State::Dragging && IsToolDrag()) {
+		if (cancelled) {
+			VpCancelPlaceSizingDrag();
+			Release(ControlInput::Left);
+		} else {
+			/* Hold the selection; Build/Cancel decides. */
+			_pending_x = x;
+			_pending_y = y;
+			_state = State::ConfirmPending;
+			ShowBuildConfirm(static_cast<int>(x), static_cast<int>(y));
+			/* Cursor stays "in window": the tile selection (and its highlight) tracks the cursor and
+			 * would collapse otherwise. The tool cursor also marks the end point. */
+			return;
+		}
+	} else {
+		/* Momentum only for map scrolls of the main view, not for tool drags. */
+		bool map_scroll = (_state == State::Dragging && _scrolling_viewport && _drag_on_main_view) || _state == State::Multi;
+		if (!cancelled) {
+			if (_state == State::Pending) Click(ControlInput::Left, x, y);
+			if (_state == State::Dragging) Release(ControlInput::Left);
+			if (map_scroll) StartFling();
+		} else if (_state == State::Dragging) {
+			Release(ControlInput::Left);
+		}
+	}
+	_state = State::Idle;
+	_primary_id = NO_FINGER;
+	HideCursor();
+}
+
 void HandleFinger(const FingerEvent &ev)
 {
 	switch (ev.type) {
-		case FingerEvent::Type::Down:
-			ApplyTouchDefaults();
-			_flinging = false; // touching the map stops momentum, as on any phone
-			_fingers.push_back({ev.finger_id, ev.x, ev.y, ev.x, ev.y});
-			if (_fingers.size() == 1) {
-				TrackStart(ev.x, ev.y);
-				_state = State::Pending;
-				_down_time = Clock::now();
-				MoveCursor(ev.x, ev.y);
-			} else if (_fingers.size() == 2) {
-				BeginMulti();
-			}
-			break;
-
-		case FingerEvent::Type::Motion: {
-			Finger *f = FindFinger(ev.finger_id);
-			if (f == nullptr) break;
-			f->x = ev.x;
-			f->y = ev.y;
-			switch (_state) {
-				case State::Pending:
-					if (std::hypot(f->x - f->start_x, f->y - f->start_y) > SLOP_DP * _density) {
-						/* Press at the start point so drags begin where the finger landed. */
-						MoveCursor(f->start_x, f->start_y);
-						_drag_on_main_view = FindWindowFromPt(static_cast<int>(f->start_x), static_cast<int>(f->start_y)) == GetMainWindow();
-						Press(ControlInput::Left);
-						_state = State::Dragging;
-						MoveCursor(f->x, f->y);
-					}
-					break;
-				case State::Dragging:
-					Track(f->x, f->y);
-					MoveCursor(f->x, f->y);
-					break;
-				case State::Multi:
-					if (_fingers.size() >= 2) UpdateMulti();
-					break;
-				default:
-					break;
-			}
-			break;
-		}
-
+		case FingerEvent::Type::Down: HandleDown(ev); break;
+		case FingerEvent::Type::Motion: HandleMotion(ev); break;
 		case FingerEvent::Type::Up:
-		case FingerEvent::Type::Cancel: {
-			Finger *f = FindFinger(ev.finger_id);
-			if (f == nullptr) break;
-			float x = f->x, y = f->y;
-			_fingers.erase(_fingers.begin() + (f - _fingers.data()));
-
-			if (_fingers.empty()) {
-				/* Momentum only for map scrolls of the main view, not for tool drags (e.g. rail building). */
-				bool map_scroll = (_state == State::Dragging && _scrolling_viewport && _drag_on_main_view) ||
-						_state == State::Multi;
-				if (ev.type == FingerEvent::Type::Up) {
-					if (_state == State::Pending) Click(ControlInput::Left, x, y);
-					if (_state == State::Dragging) Release(ControlInput::Left);
-					if (map_scroll) StartFling();
-				} else if (_state == State::Dragging) {
-					Release(ControlInput::Left);
-				}
-				_state = State::Idle;
-				HideCursor();
-			}
-			/* Lifting one of several fingers keeps the gesture in Multi until all are up. */
-			break;
-		}
+		case FingerEvent::Type::Cancel: HandleUp(ev); break;
 	}
 }
 
@@ -363,6 +454,14 @@ static void UpdateFling()
 void Update()
 {
 	UpdateFling();
+	if (_state == State::ConfirmPending && !IsToolDrag()) {
+		/* The tool was closed (e.g. its toolbar) while a build was pending: nothing left to confirm. */
+		CloseBuildConfirm();
+		_input_pressed.Reset(ControlInput::Left);
+		_input_clicked.Reset(ControlInput::Left);
+		_state = State::Idle;
+		_confirm_finger = NO_FINGER;
+	}
 	if (_state != State::Pending || _fingers.size() != 1) return;
 	if (Clock::now() - _down_time < LONG_PRESS) return;
 	const Finger &f = _fingers[0];

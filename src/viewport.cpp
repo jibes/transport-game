@@ -3477,6 +3477,35 @@ calc_heightdiff_single_direction:;
  * Handle the mouse while dragging for placement/resizing.
  * @return State of handling the event.
  */
+/** Keep the selected tool, but reset it to its original (non-dragging) mode. */
+static void EndPlaceSizingDrag()
+{
+	HighLightStyle others = _thd.place_mode & ~(HT_DRAG_MASK | HT_DIR_MASK);
+	if ((_thd.next_drawstyle & HT_DRAG_MASK) == HT_RECT) {
+		_thd.place_mode = HT_RECT | others;
+	} else if (_thd.select_method & VPM_SIGNALDIRS) {
+		_thd.place_mode = HT_RECT | others;
+	} else if (_thd.select_method & VPM_RAILDIRS) {
+		_thd.place_mode = (_thd.select_method & ~VPM_RAILDIRS) ? _thd.next_drawstyle : (HT_RAIL | others);
+	} else {
+		_thd.place_mode = HT_POINT | others;
+	}
+	SetTileSelectSize(1, 1);
+
+	HideMeasurementTooltips();
+}
+
+/**
+ * Abort a tile-area drag without executing it; the tool stays selected.
+ * Used by the touch confirmation UI when the player cancels a pending build.
+ */
+void VpCancelPlaceSizingDrag()
+{
+	if (_special_mouse_mode != SpecialMouseMode::Sizing) return;
+	_special_mouse_mode = SpecialMouseMode::None;
+	EndPlaceSizingDrag();
+}
+
 EventState VpHandlePlaceSizingDrag()
 {
 	if (_special_mouse_mode != SpecialMouseMode::Sizing && _special_mouse_mode != SpecialMouseMode::Dragging) return EventState::NotHandled;
@@ -3505,20 +3534,7 @@ EventState VpHandlePlaceSizingDrag()
 	_special_mouse_mode = SpecialMouseMode::None;
 	if (_special_mouse_mode == SpecialMouseMode::Dragging) return EventState::Handled;
 
-	/* Keep the selected tool, but reset it to the original mode. */
-	HighLightStyle others = _thd.place_mode & ~(HT_DRAG_MASK | HT_DIR_MASK);
-	if ((_thd.next_drawstyle & HT_DRAG_MASK) == HT_RECT) {
-		_thd.place_mode = HT_RECT | others;
-	} else if (_thd.select_method & VPM_SIGNALDIRS) {
-		_thd.place_mode = HT_RECT | others;
-	} else if (_thd.select_method & VPM_RAILDIRS) {
-		_thd.place_mode = (_thd.select_method & ~VPM_RAILDIRS) ? _thd.next_drawstyle : (HT_RAIL | others);
-	} else {
-		_thd.place_mode = HT_POINT | others;
-	}
-	SetTileSelectSize(1, 1);
-
-	HideMeasurementTooltips();
+	EndPlaceSizingDrag();
 	w->OnPlaceMouseUp(_thd.select_method, _thd.select_proc, _thd.selend, TileVirtXY(_thd.selstart.x, _thd.selstart.y), TileVirtXY(_thd.selend.x, _thd.selend.y));
 
 	return EventState::Handled;

@@ -36,6 +36,8 @@
 #include "../sound_func.h"
 #include "../rail_type.h"
 #include "../road_type.h"
+#include "../zoom_func.h"
+#include "../core/math_func.hpp"
 
 #include "table/strings.h"
 
@@ -165,7 +167,79 @@ static WindowDesc _mobile_bar_desc(
 	_nested_mobile_bar_widgets
 );
 
+enum MobileConfirmWidgets : WidgetID {
+	WID_MC_BUILD,
+	WID_MC_CANCEL,
+};
+
+/**
+ * Build / Cancel buttons shown after a construction drag on touch. Touches on it are handled by
+ * the touch layer (Touch::HandleFinger) before reaching the window system, because a normal click
+ * would move the cursor and thereby change the pending selection.
+ */
+struct MobileConfirmWindow : Window {
+	Point anchor;
+
+	MobileConfirmWindow(WindowDesc &desc, Point anchor) : Window(desc), anchor(anchor)
+	{
+		this->InitNested(0);
+	}
+
+	/** Above the finger (so it doesn't cover the end point), kept inside the safe area. */
+	Point OnInitialPosition(int16_t sm_width, int16_t sm_height, [[maybe_unused]] int window_number) override
+	{
+		const Touch::SafeInsets &safe = Touch::GetSafeInsets();
+		int gap = ScaleGUITrad(40);
+		int x = this->anchor.x - sm_width / 2;
+		int y = this->anchor.y - gap - sm_height;
+		if (y < safe.top) y = this->anchor.y + gap;
+		x = Clamp(x, safe.left, _screen.width - safe.right - sm_width);
+		y = Clamp(y, safe.top, _screen.height - safe.bottom - sm_height);
+		return {x, y};
+	}
+
+	ConfirmHit HitTest(int x, int y) const
+	{
+		for (WidgetID id : {WID_MC_BUILD, WID_MC_CANCEL}) {
+			Rect r = this->GetWidget<NWidgetBase>(id)->GetCurrentRect().Translate(this->left, this->top);
+			if (r.Contains({x, y})) return id == WID_MC_BUILD ? ConfirmHit::Build : ConfirmHit::Cancel;
+		}
+		return ConfirmHit::None;
+	}
+};
+
+static constexpr std::initializer_list<NWidgetPart> _nested_mobile_confirm_widgets = {
+	NWidget(NWID_HORIZONTAL, NWidContainerFlag::EqualSize),
+		NWidget(WWT_PUSHTXTBTN, Colours::DarkGreen, WID_MC_BUILD), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetStringTip(STR_MOBILE_CONFIRM_BUILD),
+		NWidget(WWT_PUSHTXTBTN, Colours::Red, WID_MC_CANCEL), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetStringTip(STR_MOBILE_CONFIRM_CANCEL),
+	EndContainer(),
+};
+
+static WindowDesc _mobile_confirm_desc(
+	WindowPosition::Manual, {}, 0, 0,
+	WindowClass::MobileConfirm, WindowClass::None,
+	{WindowDefaultFlag::NoFocus, WindowDefaultFlag::NoClose},
+	_nested_mobile_confirm_widgets
+);
+
 } // namespace
+
+void ShowBuildConfirm(int x, int y)
+{
+	CloseBuildConfirm();
+	new MobileConfirmWindow(_mobile_confirm_desc, {x, y});
+}
+
+void CloseBuildConfirm()
+{
+	CloseWindowById(WindowClass::MobileConfirm, 0);
+}
+
+ConfirmHit GetBuildConfirmHit(int x, int y)
+{
+	const MobileConfirmWindow *w = dynamic_cast<const MobileConfirmWindow *>(FindWindowById(WindowClass::MobileConfirm, 0));
+	return w != nullptr ? w->HitTest(x, y) : ConfirmHit::None;
+}
 
 /** Bottom centre of the safe area, directly above the status bar. */
 Point GetMobileBarPosition(int width, int height)

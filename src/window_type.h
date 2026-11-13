@@ -749,6 +749,12 @@ enum class WindowClass : uint16_t {
 	 */
 	MobileBar,
 
+	/**
+	 * Mobile build confirmation (src/mobile); %Window numbers:
+	 *   - 0 = #MobileConfirmWidgets
+	 */
+	MobileConfirm,
+
 	Invalid = 0xFFFF, ///< Invalid window.
 };
 

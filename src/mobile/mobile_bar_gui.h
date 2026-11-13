@@ -16,4 +16,11 @@ void ShowMobileBar();
 void RepositionMobileBar();
 Point GetMobileBarPosition(int width, int height);
 
+/** Result of a touch on the build confirmation window. */
+enum class ConfirmHit : uint8_t { None, Build, Cancel };
+
+void ShowBuildConfirm(int x, int y);
+void CloseBuildConfirm();
+ConfirmHit GetBuildConfirmHit(int x, int y);
+
 #endif /* MOBILE_BAR_GUI_H */

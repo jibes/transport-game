@@ -874,6 +874,8 @@ STR_MOBILE_MENU_SAVE                                            :Save game
 STR_MOBILE_MENU_LOAD                                            :Load game
 STR_MOBILE_MENU_SETTINGS                                        :Settings
 STR_MOBILE_MENU_EXIT                                            :Exit to main menu
+STR_MOBILE_CONFIRM_BUILD                                        :{WHITE}Build
+STR_MOBILE_CONFIRM_CANCEL                                       :{WHITE}Cancel
 STR_STATUSBAR_COMPANY_NAME                                      :{SILVER}- -  {COMPANY}  - -
 STR_STATUSBAR_PAUSED                                            :{YELLOW}*  *  PAUSED  *  *
 STR_STATUSBAR_PAUSED_LINK_GRAPH                                 :{ORANGE}*  *  PAUSED (waiting for link graph update) *  *

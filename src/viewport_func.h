@@ -31,6 +31,7 @@ void UpdateViewportPosition(Window *w, uint32_t delta_ms);
 bool MarkAllViewportsDirty(int left, int top, int right, int bottom);
 
 bool DoZoomInOutWindow(ZoomStateChange how, Window *w);
+void VpCancelPlaceSizingDrag();
 void ZoomInOrOutToCursorWindow(bool in, Window * w);
 void ConstrainAllViewportsZoom();
 Point GetTileZoomCenterWindow(bool in, Window * w);
