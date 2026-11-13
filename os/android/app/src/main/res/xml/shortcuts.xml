@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="share_log"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_share"
+        android:shortcutShortLabel="@string/share_log">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="org.openttd.mobile"
+            android:targetClass="org.openttd.mobile.LogShareActivity" />
+    </shortcut>
+</shortcuts>

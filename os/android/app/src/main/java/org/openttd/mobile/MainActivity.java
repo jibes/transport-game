@@ -7,6 +7,7 @@
 
 package org.openttd.mobile;
 
+import android.app.AlertDialog;
 import android.content.pm.PackageInfo;
 import android.content.res.AssetManager;
 import android.os.Bundle;
@@ -27,6 +28,9 @@ public class MainActivity extends SDLActivity {
     private static final String TAG = "TransportMobile";
     private static final String ASSET_ROOT = "game";
     private static final String STAMP = ".data_version";
+    private static final String LAUNCH_STAMP = ".last_launch";
+    /** A previous run whose log stopped this soon after launch counts as a failed start. */
+    private static final long FAILED_START_MS = 20_000;
 
     @Override
     protected String[] getLibraries() {
@@ -41,12 +45,52 @@ public class MainActivity extends SDLActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        boolean previousFailed = checkPreviousRun();
         try {
             extractDataIfNeeded();
         } catch (IOException e) {
             Log.e(TAG, "Extracting game data failed", e);
         }
         super.onCreate(savedInstanceState);
+        if (previousFailed) offerLogShare();
+    }
+
+    /**
+     * Detects a start that died quickly (log last written < FAILED_START_MS after launch) and keeps its
+     * log as failed_run.log, since the native side overwrites last_run.log on every start.
+     */
+    private boolean checkPreviousRun() {
+        File launch = new File(getFilesDir(), LAUNCH_STAMP);
+        File log = new File(getFilesDir(), LogShare.LAST_RUN);
+        boolean failed = false;
+        if (launch.exists() && log.exists()) {
+            long ranFor = log.lastModified() - launch.lastModified();
+            if (ranFor >= 0 && ranFor < FAILED_START_MS) {
+                try {
+                    Files.copy(log.toPath(), new File(getFilesDir(), LogShare.FAILED_RUN).toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    failed = true;
+                } catch (IOException e) {
+                    Log.e(TAG, "Saving failed-run log failed", e);
+                }
+            }
+        }
+        try {
+            new FileOutputStream(launch).close(); // touch: mtime = this launch
+            launch.setLastModified(System.currentTimeMillis());
+        } catch (IOException e) {
+            Log.e(TAG, "Writing launch stamp failed", e);
+        }
+        return failed;
+    }
+
+    private void offerLogShare() {
+        new AlertDialog.Builder(this)
+            .setTitle("Last start failed")
+            .setMessage("The game closed shortly after starting last time. Share the log so it can be fixed?")
+            .setPositiveButton("Share log", (d, w) -> LogShare.share(this, new File(getFilesDir(), LogShare.FAILED_RUN)))
+            .setNegativeButton("Not now", null)
+            .show();
     }
 
     /**
