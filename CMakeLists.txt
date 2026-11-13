@@ -294,6 +294,11 @@ target_link_libraries(openttd
 )
 
 target_link_libraries(openttd_test PRIVATE openttd_lib)
+if(ANDROID OR EMSCRIPTEN)
+    # Touch gestures and mobile defaults (src/mobile).
+    add_definitions(-DWITH_MOBILE_GUI)
+endif()
+
 if(ANDROID)
     target_link_libraries(openttd_test PRIVATE log)
     target_link_libraries(openttd log)

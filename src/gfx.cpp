@@ -29,6 +29,10 @@
 #include "table/string_colours.h"
 #include "table/sprites.h"
 
+#ifdef WITH_MOBILE_GUI
+#	include "mobile/touch_input.h"
+#endif
+
 #include "safeguards.h"
 
 ControlInputs _input_pressed; ///< Control inputs that are currently pressed.
@@ -1818,6 +1822,10 @@ static int GetTargetScale(float width, float height)
  */
 int GetAutomaticScale()
 {
+#ifdef WITH_MOBILE_GUI
+	/* Size by physical density, not window size: a phone screen has desktop-like pixel counts. */
+	if (Touch::GetDensity() > 1.0f) return std::min(Touch::GetAutomaticScale(), GetMaximumScale());
+#endif
 	return GetTargetScale(640, 480);
 }
 

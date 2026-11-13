@@ -29,6 +29,10 @@
 #	include <emscripten/html5.h>
 #endif
 
+#ifdef WITH_MOBILE_GUI
+#	include "../mobile/touch_input.h"
+#endif
+
 #include "../safeguards.h"
 
 void VideoDriver_SDL_Base::MakeDirty(int left, int top, int width, int height)
@@ -210,6 +214,18 @@ bool VideoDriver_SDL_Base::CreateMainWindow(uint w, uint h, uint flags)
 
 	std::string caption = VideoDriver::GetCaption();
 	this->sdl_window = SDL_CreateWindow(caption.c_str(), w, h, flags);
+
+#ifdef WITH_MOBILE_GUI
+	if (this->sdl_window != nullptr) {
+#	ifdef __ANDROID__
+		/* Android reports its display density (dpi / 160) as the window's display scale. */
+		Touch::Init(SDL_GetWindowDisplayScale(this->sdl_window));
+#	else
+		/* Web: the canvas already works in CSS pixels, i.e. density-independent units. */
+		Touch::Init(1.0f);
+#	endif
+	}
+#endif
 
 	if (this->sdl_window == nullptr) {
 		Debug(Facility::Driver, Severity::Critical, "SDL3: Couldn't allocate a window to draw on: {}", SDL_GetError());
@@ -457,9 +473,27 @@ bool VideoDriver_SDL_Base::PollEvent()
 {
 	SDL_Event ev;
 
+#ifdef WITH_MOBILE_GUI
+	Touch::Update();
+#endif
+
 	if (!SDL_PollEvent(&ev)) return false;
 
 	switch (ev.type) {
+#ifdef WITH_MOBILE_GUI
+		case SDL_EVENT_FINGER_DOWN:
+		case SDL_EVENT_FINGER_MOTION:
+		case SDL_EVENT_FINGER_UP:
+		case SDL_EVENT_FINGER_CANCELED: {
+			using T = Touch::FingerEvent::Type;
+			T type = ev.type == SDL_EVENT_FINGER_DOWN ? T::Down : ev.type == SDL_EVENT_FINGER_MOTION ? T::Motion :
+					ev.type == SDL_EVENT_FINGER_UP ? T::Up : T::Cancel;
+			/* Finger coordinates are normalised to the window; the backing store is the window in pixels. */
+			Touch::HandleFinger({type, ev.tfinger.fingerID, ev.tfinger.x * _screen.width, ev.tfinger.y * _screen.height});
+			break;
+		}
+#endif
+
 		case SDL_EVENT_MOUSE_MOTION: {
 			int32_t x = ev.motion.x;
 			int32_t y = ev.motion.y;
@@ -639,6 +673,10 @@ static std::optional<std::string_view> InitializeSDL()
 	SDL_SetHint(SDL_HINT_APP_NAME, "OpenTTD");
 #endif
 
+#ifdef WITH_MOBILE_GUI
+	/* Touch is handled by src/mobile; SDL's synthetic mouse events would double every tap. */
+	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+#endif
 	if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) return SDL_GetError();
 	return std::nullopt;
 }
