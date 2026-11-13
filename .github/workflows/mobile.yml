@@ -86,7 +86,8 @@ jobs:
           adb exec-out screencap -p > screen.png
           adb logcat -d > logcat.txt
           echo "----- logcat (filtered) -----"
-          grep -E "openttd|SDL|TransportMobile|AndroidRuntime|DEBUG|libc|FATAL|crash" logcat.txt | tail -n 300 || true
+          grep -E " openttd |TransportMobile|AndroidRuntime|F DEBUG" logcat.txt | tail -n 300 || true
+          if grep -E "openttd : Error:|F DEBUG|FATAL EXCEPTION" logcat.txt; then echo "SMOKE: FAILED"; exit 1; fi
 
     - uses: actions/upload-artifact@v4
       if: always()
