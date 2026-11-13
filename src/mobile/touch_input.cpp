@@ -58,6 +58,7 @@ enum class State : uint8_t {
 	LongPressed, ///< Right click delivered; ignore until lift.
 	Multi, ///< Two or more fingers: pan/pinch.
 	ConfirmPending, ///< Construction drag finished, left button still held until Build/Cancel.
+	WindowPan, ///< One finger slides a window that does not fit the screen.
 };
 
 static float _density = 1.0f;
@@ -73,6 +74,8 @@ static uint64_t _primary_id = NO_FINGER; ///< Finger driving the current one-fin
 static uint64_t _confirm_finger = NO_FINGER; ///< Finger currently pressing a Build/Cancel button.
 static ConfirmHit _confirm_hit = ConfirmHit::None;
 static float _pending_x = 0.0f, _pending_y = 0.0f; ///< Where the pending construction drag ended.
+static WindowClass _pan_class = WindowClass::Invalid; ///< Window being panned (looked up again each move: it may close).
+static WindowNumber _pan_number = 0;
 
 /** Scroll velocity estimate (screen px per ms, direction of finger travel) and momentum state. */
 static float _vel_x = 0.0f, _vel_y = 0.0f;
@@ -288,6 +291,61 @@ static void ResolveConfirm(bool build)
 	HideCursor();
 }
 
+/**
+ * Can a drag starting at (x, y) slide window \a w? Only windows that don't fit the safe area, and only
+ * from non-interactive spots (background, frames, text), so buttons, lists, sliders and scrollbars
+ * keep their normal drag behaviour.
+ */
+static bool IsPannableBackground(Window *w, int x, int y)
+{
+	if (w == nullptr || w == GetMainWindow() || w->nested_root == nullptr) return false;
+	int area_w = _screen.width - _safe_insets.left - _safe_insets.right;
+	int area_h = _screen.height - _safe_insets.top - _safe_insets.bottom;
+	bool fits = w->width <= area_w && w->height <= area_h &&
+			w->left >= _safe_insets.left && w->left + w->width <= _screen.width - _safe_insets.right &&
+			w->top >= _safe_insets.top && w->top + w->height <= _screen.height - _safe_insets.bottom;
+	if (fits) return false;
+
+	NWidgetCore *nw = w->nested_root->GetWidgetFromPos(x - w->left, y - w->top);
+	if (nw == nullptr) return true;
+	switch (nw->type) {
+		case WWT_LABEL:
+		case WWT_TEXT:
+			return true;
+		case WWT_EMPTY:
+		case WWT_PANEL:
+		case WWT_FRAME:
+			return nw->GetIndex() == INVALID_WIDGET; // panels with an ID are usually lists or click targets
+		default:
+			return false;
+	}
+}
+
+/** Clamp one axis: an oversized window may only move so far that its far edge reaches the screen edge. */
+static int ClampPanAxis(int pos, int size, int lo, int hi)
+{
+	if (size > hi - lo) return Clamp(pos, hi - size, lo);
+	return Clamp(pos, lo, hi - size);
+}
+
+/** Slide the panned window so its content follows the finger. */
+static void PanWindow(int dx, int dy)
+{
+	Window *w = FindWindowById(_pan_class, _pan_number);
+	if (w == nullptr) return;
+	int nx = ClampPanAxis(w->left + dx, w->width, _safe_insets.left, _screen.width - _safe_insets.right);
+	int ny = ClampPanAxis(w->top + dy, w->height, _safe_insets.top, _screen.height - _safe_insets.bottom);
+	if (nx == w->left && ny == w->top) return;
+	w->SetDirty();
+	if (w->viewport != nullptr) {
+		w->viewport->left += nx - w->left;
+		w->viewport->top += ny - w->top;
+	}
+	w->left = nx;
+	w->top = ny;
+	w->SetDirty();
+}
+
 /** First finger of a new gesture. */
 static void BeginGesture(const FingerEvent &ev)
 {
@@ -345,6 +403,16 @@ static void HandleMotion(const FingerEvent &ev)
 	switch (_state) {
 		case State::Pending:
 			if (std::hypot(f->x - f->start_x, f->y - f->start_y) > SLOP_DP * _density) {
+				if (Window *w = FindWindowFromPt(static_cast<int>(f->start_x), static_cast<int>(f->start_y));
+						IsPannableBackground(w, static_cast<int>(f->start_x), static_cast<int>(f->start_y))) {
+					_pan_class = w->window_class;
+					_pan_number = w->window_number;
+					_mid_x = f->x;
+					_mid_y = f->y;
+					PanWindow(static_cast<int>(f->x - f->start_x), static_cast<int>(f->y - f->start_y));
+					_state = State::WindowPan;
+					break;
+				}
 				/* Press at the start point so drags begin where the finger landed. */
 				MoveCursor(f->start_x, f->start_y);
 				_drag_on_main_view = FindWindowFromPt(static_cast<int>(f->start_x), static_cast<int>(f->start_y)) == GetMainWindow();
@@ -361,6 +429,15 @@ static void HandleMotion(const FingerEvent &ev)
 		case State::Multi:
 			if (_fingers.size() >= 2) UpdateMulti();
 			break;
+		case State::WindowPan: {
+			if (f->id != _primary_id) break;
+			int dx = static_cast<int>(f->x - _mid_x);
+			int dy = static_cast<int>(f->y - _mid_y);
+			PanWindow(dx, dy);
+			_mid_x += dx;
+			_mid_y += dy;
+			break;
+		}
 		default:
 			break;
 	}
