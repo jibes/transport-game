@@ -879,7 +879,6 @@ STR_MOBILE_MENU_SETTINGS                                        :Settings
 STR_MOBILE_MENU_EXIT                                            :Exit to main menu
 STR_MOBILE_CONFIRM_BUILD                                        :{WHITE}Build
 STR_MOBILE_CONFIRM_CANCEL                                       :{WHITE}Cancel
-STR_MOBILE_PALETTE_RAIL                                         :Railway
 STR_MOBILE_TOOL_TRACK                                           :Track
 STR_MOBILE_TOOL_STATION                                         :Station
 STR_MOBILE_TOOL_DEPOT                                           :Depot
@@ -889,6 +888,26 @@ STR_MOBILE_TOOL_TUNNEL                                          :Tunnel
 STR_MOBILE_TOOL_WAYPOINT                                        :Waypoint
 STR_MOBILE_TOOL_DEMOLISH                                        :Demolish
 STR_MOBILE_TOOL_REMOVE                                          :Remove
+STR_MOBILE_TOOL_ROAD                                            :Road
+STR_MOBILE_TOOL_BUS_STOP                                        :Bus stop
+STR_MOBILE_TOOL_LORRY_STOP                                      :Lorry stop
+STR_MOBILE_TOOL_ONE_WAY                                         :One-way
+STR_MOBILE_TOOL_TRAMWAY                                         :Tramway
+STR_MOBILE_TOOL_PASSENGER_STOP                                  :Passenger stop
+STR_MOBILE_TOOL_FREIGHT_STOP                                    :Freight stop
+STR_MOBILE_TOOL_CANAL                                           :Canal
+STR_MOBILE_TOOL_LOCK                                            :Lock
+STR_MOBILE_TOOL_DOCK                                            :Dock
+STR_MOBILE_TOOL_BUOY                                            :Buoy
+STR_MOBILE_TOOL_AQUEDUCT                                        :Aqueduct
+STR_MOBILE_TOOL_AIRPORT                                         :Airport
+STR_MOBILE_TOOL_LOWER                                           :Lower land
+STR_MOBILE_TOOL_RAISE                                           :Raise land
+STR_MOBILE_TOOL_LEVEL                                           :Level land
+STR_MOBILE_TOOL_BUY_LAND                                        :Buy land
+STR_MOBILE_TOOL_TREES                                           :Trees
+STR_MOBILE_TOOL_SIGN                                            :Sign
+STR_MOBILE_TOOL_OBJECT                                          :Object
 STR_STATUSBAR_COMPANY_NAME                                      :{SILVER}- -  {COMPANY}  - -
 STR_STATUSBAR_PAUSED                                            :{YELLOW}*  *  PAUSED  *  *
 STR_STATUSBAR_PAUSED_LINK_GRAPH                                 :{ORANGE}*  *  PAUSED (waiting for link graph update) *  *

@@ -128,12 +128,12 @@ struct MobileBarWindow : Window {
 		switch (widget) {
 			case WID_MB_BUILD:
 				switch (static_cast<BuildEntry>(index)) {
-					case BuildEntry::Rail: ShowRailPalette(); break;
-					case BuildEntry::Road: ShowBuildRoadToolbar(_last_built_roadtype); break;
-					case BuildEntry::Tram: ShowBuildRoadToolbar(_last_built_tramtype); break;
-					case BuildEntry::Water: ShowBuildDocksToolbar(); break;
-					case BuildEntry::Air: ShowBuildAirToolbar(); break;
-					case BuildEntry::Landscape: ShowTerraformToolbar(nullptr); break;
+					case BuildEntry::Rail: ShowBuildPalette(PaletteMode::Rail); break;
+					case BuildEntry::Road: ShowBuildPalette(PaletteMode::Road); break;
+					case BuildEntry::Tram: ShowBuildPalette(PaletteMode::Tram); break;
+					case BuildEntry::Water: ShowBuildPalette(PaletteMode::Water); break;
+					case BuildEntry::Air: ShowBuildPalette(PaletteMode::Air); break;
+					case BuildEntry::Landscape: ShowBuildPalette(PaletteMode::Landscape); break;
 					case BuildEntry::Trees: ShowBuildTreesToolbar(); break;
 				}
 				break;

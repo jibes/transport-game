@@ -12,7 +12,10 @@
 
 #include "../core/geometry_type.hpp"
 
-void ShowRailPalette();
+/** Build modes with a touch palette; order matches PALETTE_KINDS. */
+enum class PaletteMode : uint8_t { Rail, Road, Tram, Water, Air, Landscape, End };
+
+void ShowBuildPalette(PaletteMode mode);
 void RepositionBuildPalette();
 Point GetBuildPalettePosition(int width, int height);
 
