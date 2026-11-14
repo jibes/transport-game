@@ -119,6 +119,20 @@ static constexpr PaletteTool LANDSCAPE_TOOLS[] = {
 	{WID_TT_PLACE_OBJECT, STR_MOBILE_TOOL_OBJECT},
 };
 
+/** The build-mode chooser (Build button): one cell per mode; toolbar_widget holds the PaletteMode. */
+static constexpr PaletteTool CHOOSER_TOOLS[] = {
+	{to_underlying(PaletteMode::Rail), STR_MOBILE_BUILD_RAIL},
+	{to_underlying(PaletteMode::Road), STR_MOBILE_BUILD_ROAD},
+	{to_underlying(PaletteMode::Tram), STR_MOBILE_BUILD_TRAM},
+	{to_underlying(PaletteMode::Water), STR_MOBILE_BUILD_WATER},
+	{to_underlying(PaletteMode::Air), STR_MOBILE_BUILD_AIR},
+	{to_underlying(PaletteMode::Landscape), STR_MOBILE_BUILD_LANDSCAPE},
+};
+static constexpr SpriteID CHOOSER_SPRITES[] = {
+	SPR_IMG_BUILDRAIL, SPR_IMG_BUILDROAD, SPR_IMG_BUILDTRAMS, SPR_IMG_BUILDWATER, SPR_IMG_BUILDAIR, SPR_IMG_LANDSCAPING,
+};
+static_assert(std::size(CHOOSER_TOOLS) == std::size(CHOOSER_SPRITES));
+
 /** A build mode: which (parked) construction toolbar the palette drives, and with which tools. */
 struct PaletteKind {
 	WindowClass toolbar_class;
@@ -135,6 +149,7 @@ static const PaletteKind PALETTE_KINDS[] = {
 	{WindowClass::BuildToolbar, to_underlying(TransportType::Water), STR_MOBILE_BUILD_WATER, WATER_TOOLS, [] { return ShowBuildDocksToolbar(); }},
 	{WindowClass::BuildToolbar, to_underlying(TransportType::Air), STR_MOBILE_BUILD_AIR, AIR_TOOLS, [] { return ShowBuildAirToolbar(); }},
 	{WindowClass::ScenarioGenerateLandscape, 0, STR_MOBILE_BUILD_LANDSCAPE, LANDSCAPE_TOOLS, [] { return ShowTerraformToolbar(nullptr); }},
+	{WindowClass::Invalid, 0, STR_MOBILE_BAR_BUILD, CHOOSER_TOOLS, nullptr},
 };
 static_assert(std::size(PALETTE_KINDS) == static_cast<size_t>(PaletteMode::End));
 
@@ -143,6 +158,12 @@ static PaletteMode _palette_mode = PaletteMode::Rail; ///< Mode of the palette b
 static const PaletteKind &CurrentKind()
 {
 	return PALETTE_KINDS[to_underlying(_palette_mode)];
+}
+
+/** The chooser drives no toolbar; its cells open the mode palettes. */
+static bool IsChooser()
+{
+	return _palette_mode == PaletteMode::Chooser;
 }
 
 static int NumTools()
@@ -198,7 +219,9 @@ struct BuildPaletteWindow : Window {
 	{
 		this->CreateNestedTree();
 		/* Same icons as the toolbar (they depend on the rail type). */
-		if (const Window *rt = GetToolbar(); rt != nullptr) {
+		if (IsChooser()) {
+			for (int i = 0; i < NumTools(); i++) this->GetWidget<NWidgetCore>(WID_BP_TOOL_FIRST + i)->SetSprite(CHOOSER_SPRITES[i]);
+		} else if (const Window *rt = GetToolbar(); rt != nullptr) {
 			for (int i = 0; i < NumTools(); i++) {
 				const NWidgetCore *src = rt->GetWidget<NWidgetCore>(CurrentKind().tools[i].toolbar_widget);
 				if (src != nullptr) this->GetWidget<NWidgetCore>(WID_BP_TOOL_FIRST + i)->SetSprite(src->GetSprite());
@@ -225,7 +248,7 @@ struct BuildPaletteWindow : Window {
 	{
 		if (!this->keep_toolbar) {
 			const PaletteKind &kind = CurrentKind();
-			CloseWindowById(kind.toolbar_class, kind.toolbar_number);
+			if (!IsChooser()) CloseWindowById(kind.toolbar_class, kind.toolbar_number);
 			_palette_open = false;
 			RepositionMobileBar(); // bring the navigation back into the bottom row
 		}
@@ -235,6 +258,10 @@ struct BuildPaletteWindow : Window {
 	void OnClick([[maybe_unused]] Point pt, WidgetID widget, int click_count) override
 	{
 		if (widget < WID_BP_TOOL_FIRST || widget >= WID_BP_TOOL_FIRST + NumTools()) return;
+		if (IsChooser()) {
+			ShowBuildPalette(static_cast<PaletteMode>(CurrentKind().tools[widget - WID_BP_TOOL_FIRST].toolbar_widget));
+			return;
+		}
 		Window *rt = GetToolbar();
 		if (rt == nullptr) return;
 		rt->OnClick({0, 0}, CurrentKind().tools[widget - WID_BP_TOOL_FIRST].toolbar_widget, click_count);
@@ -244,6 +271,7 @@ struct BuildPaletteWindow : Window {
 	/** Mirror the toolbar's pressed tool, and follow it when it closes. */
 	void OnMouseLoop() override
 	{
+		if (IsChooser()) return;
 		const Window *rt = GetToolbar();
 		if (rt == nullptr) {
 			this->Close();
@@ -255,6 +283,7 @@ struct BuildPaletteWindow : Window {
 
 	void SyncLowered()
 	{
+		if (IsChooser()) return;
 		const Window *rt = GetToolbar();
 		if (rt == nullptr) return;
 		for (int i = 0; i < NumTools(); i++) {
@@ -359,8 +388,10 @@ void ShowBuildPalette(PaletteMode mode)
 {
 	CloseWindowById(WindowClass::MobilePalette, 0);
 	_palette_mode = mode;
-	Window *rt = CurrentKind().open();
-	if (rt == nullptr) return;
-	ParkToolbar(rt);
+	if (CurrentKind().open != nullptr) {
+		Window *rt = CurrentKind().open();
+		if (rt == nullptr) return;
+		ParkToolbar(rt);
+	}
 	OpenPaletteWindow();
 }

@@ -70,7 +70,6 @@ enum MobileBarWidgets : WidgetID {
 	WID_MB_CONTEXT, ///< Not a real widget: id of the long-press map context menu dropdown.
 };
 
-enum class BuildEntry : int { Rail, Road, Tram, Water, Air, Landscape, Trees };
 enum class VehicleEntry : int { Trains, RoadVehicles, Ships, Aircraft };
 enum class MenuEntry : int { ToggleToolbar, Pause, Save, Load, Settings, ExitToMenu };
 enum class ContextEntry : int { Info, Centre, Station, Town, Demolish };
@@ -104,14 +103,9 @@ struct MobileBarWindow : Window {
 		DropDownList list;
 		switch (widget) {
 			case WID_MB_BUILD:
-				list.push_back(MakeDropDownListStringItem(STR_MOBILE_BUILD_RAIL, BuildEntry::Rail));
-				list.push_back(MakeDropDownListStringItem(STR_MOBILE_BUILD_ROAD, BuildEntry::Road));
-				list.push_back(MakeDropDownListStringItem(STR_MOBILE_BUILD_TRAM, BuildEntry::Tram));
-				list.push_back(MakeDropDownListStringItem(STR_MOBILE_BUILD_WATER, BuildEntry::Water));
-				list.push_back(MakeDropDownListStringItem(STR_MOBILE_BUILD_AIR, BuildEntry::Air));
-				list.push_back(MakeDropDownListStringItem(STR_MOBILE_BUILD_LANDSCAPE, BuildEntry::Landscape));
-				list.push_back(MakeDropDownListStringItem(STR_MOBILE_BUILD_TREES, BuildEntry::Trees));
-				break;
+				/* Icon row of build modes in place of the navigation (see build_palette_gui.cpp). */
+				ShowBuildPalette(PaletteMode::Chooser);
+				return;
 
 			case WID_MB_VEHICLES:
 				list.push_back(MakeDropDownListStringItem(STR_MOBILE_VEHICLES_TRAINS, VehicleEntry::Trains));
@@ -162,18 +156,6 @@ struct MobileBarWindow : Window {
 					case ContextEntry::Demolish:
 						Command<Commands::LandscapeClear>::Post(STR_ERROR_CAN_T_CLEAR_THIS_AREA, _context_tile);
 						break;
-				}
-				break;
-
-			case WID_MB_BUILD:
-				switch (static_cast<BuildEntry>(index)) {
-					case BuildEntry::Rail: ShowBuildPalette(PaletteMode::Rail); break;
-					case BuildEntry::Road: ShowBuildPalette(PaletteMode::Road); break;
-					case BuildEntry::Tram: ShowBuildPalette(PaletteMode::Tram); break;
-					case BuildEntry::Water: ShowBuildPalette(PaletteMode::Water); break;
-					case BuildEntry::Air: ShowBuildPalette(PaletteMode::Air); break;
-					case BuildEntry::Landscape: ShowBuildPalette(PaletteMode::Landscape); break;
-					case BuildEntry::Trees: ShowBuildTreesToolbar(); break;
 				}
 				break;
 
