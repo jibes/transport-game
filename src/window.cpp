@@ -1565,7 +1565,8 @@ void Window::FindWindowPlacementAndResize(int def_width, int def_height, bool al
 	if (nx + this->width > _screen.width) nx -= (nx + this->width - _screen.width);
 
 	const Window *wt = FindWindowById(WindowClass::MainToolbar, 0);
-	ny = std::max(ny, (wt == nullptr || this == wt || this->top == 0) ? 0 : wt->height);
+	/* Below the toolbar's bottom edge (0 when it is parked above the screen on touch). */
+	ny = std::max(ny, (wt == nullptr || this == wt || this->top == 0) ? 0 : std::max(0, wt->top + wt->height));
 	nx = std::max(nx, 0);
 
 	if (this->viewport != nullptr) {

@@ -33,6 +33,9 @@
 #include "../road_type.h"
 #include "../terraform_gui.h"
 #include "../gui.h"
+#include "../vehicle_gui.h"
+#include "../vehicle_type.h"
+#include "../company_func.h"
 #include "../zoom_func.h"
 #include "../core/math_func.hpp"
 #include "../table/sprites.h"
@@ -133,6 +136,18 @@ static constexpr SpriteID CHOOSER_SPRITES[] = {
 };
 static_assert(std::size(CHOOSER_TOOLS) == std::size(CHOOSER_SPRITES));
 
+/** Vehicle lists (Vehicles button): toolbar_widget holds the VehicleType. */
+static constexpr PaletteTool VEHICLE_TOOLS[] = {
+	{to_underlying(VehicleType::Train), STR_MOBILE_VEHICLES_TRAINS},
+	{to_underlying(VehicleType::Road), STR_MOBILE_VEHICLES_ROAD},
+	{to_underlying(VehicleType::Ship), STR_MOBILE_VEHICLES_SHIPS},
+	{to_underlying(VehicleType::Aircraft), STR_MOBILE_VEHICLES_AIRCRAFT},
+};
+static constexpr SpriteID VEHICLE_SPRITES[] = {
+	SPR_IMG_TRAINLIST, SPR_IMG_TRUCKLIST, SPR_IMG_SHIPLIST, SPR_IMG_AIRPLANESLIST,
+};
+static_assert(std::size(VEHICLE_TOOLS) == std::size(VEHICLE_SPRITES));
+
 /** A build mode: which (parked) construction toolbar the palette drives, and with which tools. */
 struct PaletteKind {
 	WindowClass toolbar_class;
@@ -150,6 +165,7 @@ static const PaletteKind PALETTE_KINDS[] = {
 	{WindowClass::BuildToolbar, to_underlying(TransportType::Air), STR_MOBILE_BUILD_AIR, AIR_TOOLS, [] { return ShowBuildAirToolbar(); }},
 	{WindowClass::ScenarioGenerateLandscape, 0, STR_MOBILE_BUILD_LANDSCAPE, LANDSCAPE_TOOLS, [] { return ShowTerraformToolbar(nullptr); }},
 	{WindowClass::Invalid, 0, STR_MOBILE_BAR_BUILD, CHOOSER_TOOLS, nullptr},
+	{WindowClass::Invalid, 0, STR_MOBILE_BAR_VEHICLES, VEHICLE_TOOLS, nullptr},
 };
 static_assert(std::size(PALETTE_KINDS) == static_cast<size_t>(PaletteMode::End));
 
@@ -160,10 +176,15 @@ static const PaletteKind &CurrentKind()
 	return PALETTE_KINDS[to_underlying(_palette_mode)];
 }
 
-/** The chooser drives no toolbar; its cells open the mode palettes. */
+/** Menu rows drive no toolbar: the build chooser opens palettes, the vehicle row opens lists. */
 static bool IsChooser()
 {
-	return _palette_mode == PaletteMode::Chooser;
+	return _palette_mode == PaletteMode::Chooser || _palette_mode == PaletteMode::Vehicles;
+}
+
+static SpriteID MenuRowSprite(int i)
+{
+	return _palette_mode == PaletteMode::Vehicles ? VEHICLE_SPRITES[i] : CHOOSER_SPRITES[i];
 }
 
 static int NumTools()
@@ -220,7 +241,7 @@ struct BuildPaletteWindow : Window {
 		this->CreateNestedTree();
 		/* Same icons as the toolbar (they depend on the rail type). */
 		if (IsChooser()) {
-			for (int i = 0; i < NumTools(); i++) this->GetWidget<NWidgetCore>(WID_BP_TOOL_FIRST + i)->SetSprite(CHOOSER_SPRITES[i]);
+			for (int i = 0; i < NumTools(); i++) this->GetWidget<NWidgetCore>(WID_BP_TOOL_FIRST + i)->SetSprite(MenuRowSprite(i));
 		} else if (const Window *rt = GetToolbar(); rt != nullptr) {
 			for (int i = 0; i < NumTools(); i++) {
 				const NWidgetCore *src = rt->GetWidget<NWidgetCore>(CurrentKind().tools[i].toolbar_widget);
@@ -259,7 +280,13 @@ struct BuildPaletteWindow : Window {
 	{
 		if (widget < WID_BP_TOOL_FIRST || widget >= WID_BP_TOOL_FIRST + NumTools()) return;
 		if (IsChooser()) {
-			ShowBuildPalette(static_cast<PaletteMode>(CurrentKind().tools[widget - WID_BP_TOOL_FIRST].toolbar_widget));
+			int value = CurrentKind().tools[widget - WID_BP_TOOL_FIRST].toolbar_widget;
+			if (_palette_mode == PaletteMode::Vehicles) {
+				this->Close(); // back to the navigation row; the list opens as a window
+				ShowVehicleListWindow(_local_company, static_cast<VehicleType>(value));
+			} else {
+				ShowBuildPalette(static_cast<PaletteMode>(value));
+			}
 			return;
 		}
 		Window *rt = GetToolbar();

@@ -70,7 +70,6 @@ enum MobileBarWidgets : WidgetID {
 	WID_MB_CONTEXT, ///< Not a real widget: id of the long-press map context menu dropdown.
 };
 
-enum class VehicleEntry : int { Trains, RoadVehicles, Ships, Aircraft };
 enum class MenuEntry : int { ToggleToolbar, Pause, Save, Load, Settings, ExitToMenu };
 enum class ContextEntry : int { Info, Centre, Station, Town, Demolish };
 
@@ -108,11 +107,8 @@ struct MobileBarWindow : Window {
 				return;
 
 			case WID_MB_VEHICLES:
-				list.push_back(MakeDropDownListStringItem(STR_MOBILE_VEHICLES_TRAINS, VehicleEntry::Trains));
-				list.push_back(MakeDropDownListStringItem(STR_MOBILE_VEHICLES_ROAD, VehicleEntry::RoadVehicles));
-				list.push_back(MakeDropDownListStringItem(STR_MOBILE_VEHICLES_SHIPS, VehicleEntry::Ships));
-				list.push_back(MakeDropDownListStringItem(STR_MOBILE_VEHICLES_AIRCRAFT, VehicleEntry::Aircraft));
-				break;
+				ShowBuildPalette(PaletteMode::Vehicles); // icon row, like Build
+				return;
 
 			case WID_MB_MAP:
 				ShowSmallMap();
@@ -158,12 +154,6 @@ struct MobileBarWindow : Window {
 						break;
 				}
 				break;
-
-			case WID_MB_VEHICLES: {
-				static constexpr VehicleType types[] = {VehicleType::Train, VehicleType::Road, VehicleType::Ship, VehicleType::Aircraft};
-				if (index >= 0 && index < static_cast<int>(std::size(types))) ShowVehicleListWindow(_local_company, types[index]);
-				break;
-			}
 
 			case WID_MB_MENU:
 				switch (static_cast<MenuEntry>(index)) {
@@ -218,19 +208,20 @@ struct MobileConfirmWindow : Window {
 	MobileConfirmWindow(WindowDesc &desc, Point anchor) : Window(desc), anchor(anchor)
 	{
 		this->InitNested(0);
+		const Touch::SafeInsets &safe = Touch::GetSafeInsets();
+		int area_width = _screen.width - safe.left - safe.right;
+		if (this->width < area_width) ResizeWindow(this, area_width - this->width, 0, false);
 	}
 
-	/** Above the finger (so it doesn't cover the end point), kept inside the safe area. */
-	Point OnInitialPosition(int16_t sm_width, int16_t sm_height, [[maybe_unused]] int window_number) override
+	/**
+	 * In the action row, directly above the palette: actions stay in one place at the bottom and
+	 * the pending selection on the map is never covered.
+	 */
+	Point OnInitialPosition([[maybe_unused]] int16_t sm_width, int16_t sm_height, [[maybe_unused]] int window_number) override
 	{
-		const Touch::SafeInsets &safe = Touch::GetSafeInsets();
-		int gap = ScaleGUITrad(40);
-		int x = this->anchor.x - sm_width / 2;
-		int y = this->anchor.y - gap - sm_height;
-		if (y < safe.top) y = this->anchor.y + gap;
-		x = Clamp(x, safe.left, _screen.width - safe.right - sm_width);
-		y = Clamp(y, safe.top, _screen.height - safe.bottom - sm_height);
-		return {x, y};
+		int bottom = GetActionRowBottom();
+		if (const Window *palette = FindWindowById(WindowClass::MobilePalette, 0); palette != nullptr) bottom = palette->top;
+		return {Touch::GetSafeInsets().left, bottom - sm_height};
 	}
 
 	void UpdateWidgetSize(WidgetID widget, Dimension &size, [[maybe_unused]] const Dimension &padding, [[maybe_unused]] Dimension &fill, [[maybe_unused]] Dimension &resize) override
@@ -253,8 +244,9 @@ struct MobileConfirmWindow : Window {
 
 static constexpr std::initializer_list<NWidgetPart> _nested_mobile_confirm_widgets = {
 	NWidget(NWID_HORIZONTAL, NWidContainerFlag::EqualSize),
-		NWidget(WWT_PUSHTXTBTN, Colours::DarkGreen, WID_MC_BUILD), SetFill(1, 1), SetStringTip(STR_MOBILE_CONFIRM_BUILD),
-		NWidget(WWT_PUSHTXTBTN, Colours::Red, WID_MC_CANCEL), SetFill(1, 1), SetStringTip(STR_MOBILE_CONFIRM_CANCEL),
+		/* Confirming action on the right, as on Android. */
+		NWidget(WWT_PUSHTXTBTN, Colours::Red, WID_MC_CANCEL), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_CONFIRM_CANCEL),
+		NWidget(WWT_PUSHTXTBTN, Colours::DarkGreen, WID_MC_BUILD), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_CONFIRM_BUILD),
 	EndContainer(),
 };
 

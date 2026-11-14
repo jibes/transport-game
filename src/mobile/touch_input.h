@@ -38,6 +38,7 @@ int TouchTargetPx();
 bool IsToolbarHidden();
 void SetToolbarHidden(bool hidden);
 uint32_t GetMinItemHeight();
+void HandleBack();
 int GetAutomaticScale();
 int GetMaximumScale();
 void HandleFinger(const FingerEvent &ev);

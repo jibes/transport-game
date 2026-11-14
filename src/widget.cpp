@@ -25,6 +25,10 @@
 #include "table/strings.h"
 #include "table/string_colours.h"
 
+#ifdef WITH_MOBILE_GUI
+#	include "mobile/touch_input.h"
+#endif
+
 #include "safeguards.h"
 
 WidgetDimensions WidgetDimensions::scaled = {};
@@ -2956,6 +2960,10 @@ void NWidgetLeaf::SetupSmallestSize(Window *w)
 				NWidgetLeaf::closebox_dimension.height += padding.height;
 			}
 			size = maxdim(size, NWidgetLeaf::closebox_dimension);
+#ifdef WITH_MOBILE_GUI
+			/* Closing is the most frequent action on any window: finger-sized on touch. */
+			if (Touch::IsTouchUsed()) size = maxdim(size, {static_cast<uint>(Touch::TouchTargetPx()), static_cast<uint>(Touch::TouchTargetPx())});
+#endif
 			break;
 		}
 		case WWT_TEXTBTN:

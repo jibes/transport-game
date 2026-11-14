@@ -154,10 +154,37 @@ int TouchTargetPx()
 	return std::max(1, static_cast<int>(48.0f * _density + 0.5f));
 }
 
-/** Minimum height of list rows (dropdowns) for touch; 28 GUI units is 28dp at the mobile GUI scale. */
+/** Minimum height of list rows (dropdowns, purchase and order lists) on touch: rows are actions. */
 uint32_t GetMinItemHeight()
 {
-	return _touch_used ? ScaleGUITrad(28) : 0;
+	return _touch_used ? TouchTargetPx() : 0;
+}
+
+/**
+ * Android back: undo the most recent "layer" - active construction tool, then the topmost
+ * closable window (including the bottom-row palettes). Never leaves the game.
+ */
+void HandleBack()
+{
+	if (_thd.place_mode != HT_NONE) {
+		ResetObjectToPlace();
+		return;
+	}
+	for (Window *w : Window::IterateFromFront()) {
+		if (w->window_desc.flags.Test(WindowDefaultFlag::NoClose)) continue;
+		switch (w->window_class) {
+			case WindowClass::MainWindow:
+			case WindowClass::MainToolbar:
+			case WindowClass::Statusbar:
+			case WindowClass::ToolTips:
+			case WindowClass::BuildToolbar: // parked; closed together with its palette
+			case WindowClass::ScenarioGenerateLandscape:
+				continue;
+			default:
+				w->Close();
+				return;
+		}
+	}
 }
 
 void SetSafeInsets(const SafeInsets &insets)

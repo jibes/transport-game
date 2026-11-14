@@ -618,6 +618,12 @@ bool VideoDriver_SDL_Base::PollEvent()
 			HandleExitGameRequest();
 			break;
 
+#ifdef WITH_MOBILE_GUI
+		case SDL_EVENT_KEY_UP:
+			if (ev.key.key == SDLK_AC_BACK) Touch::HandleBack();
+			break;
+#endif
+
 		case SDL_EVENT_KEY_DOWN: // Toggle full-screen on ALT + ENTER/F
 			if ((ev.key.mod & (SDL_KMOD_ALT | SDL_KMOD_GUI)) &&
 					(ev.key.key == SDLK_RETURN || ev.key.key == SDLK_F)) {
@@ -713,6 +719,8 @@ static std::optional<std::string_view> InitializeSDL()
 #ifdef WITH_MOBILE_GUI
 	/* Touch is handled by src/mobile; SDL's synthetic mouse events would double every tap. */
 	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+	/* Deliver Android's back gesture as a key (handled by Touch::HandleBack) instead of leaving the app. */
+	SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
 #endif
 	if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) return SDL_GetError();
 	return std::nullopt;
