@@ -28,13 +28,15 @@ struct SafeInsets {
 	int left = 0, top = 0, right = 0, bottom = 0;
 };
 
-void Init(float density);
+void Init(float density, bool touch_device);
+bool IsTouchDevice();
 void SetSafeInsets(const SafeInsets &insets);
 const SafeInsets &GetSafeInsets();
 float GetDensity();
 bool IsTouchUsed();
 uint32_t GetMinItemHeight();
 int GetAutomaticScale();
+int GetMaximumScale();
 void HandleFinger(const FingerEvent &ev);
 void Update();
 

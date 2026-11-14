@@ -1824,7 +1824,7 @@ int GetAutomaticScale()
 {
 #ifdef WITH_MOBILE_GUI
 	/* Size by physical density, not window size: a phone screen has desktop-like pixel counts. */
-	if (Touch::GetDensity() > 1.0f) return std::min(Touch::GetAutomaticScale(), GetMaximumScale());
+	if (Touch::IsTouchDevice()) return std::min(Touch::GetAutomaticScale(), GetMaximumScale());
 #endif
 	return GetTargetScale(640, 480);
 }
@@ -1835,6 +1835,10 @@ int GetAutomaticScale()
  */
 int GetMaximumScale()
 {
+#ifdef WITH_MOBILE_GUI
+	/* Phones: windows larger than the screen are fine (they can be slid into view); finger-sized controls matter more. */
+	if (Touch::IsTouchDevice()) return std::max(GetTargetScale(480, 360), Touch::GetMaximumScale());
+#endif
 	return GetTargetScale(480, 360);
 }
 

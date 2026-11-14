@@ -61,13 +61,14 @@ enum class VehicleEntry : int { Trains, RoadVehicles, Ships, Aircraft };
 enum class MenuEntry : int { Pause, Save, Load, Settings, ExitToMenu };
 
 /** Minimum button size in GUI pixels; at the mobile GUI scale one GUI pixel is one dp, so ~48dp targets. */
-static constexpr int BUTTON_WIDTH = 76;
+static constexpr int BUTTON_WIDTH = 56; ///< Minimum; the bar stretches to the full safe width like a native bottom navigation bar.
 static constexpr int BUTTON_HEIGHT = 30;
 
 struct MobileBarWindow : Window {
 	MobileBarWindow(WindowDesc &desc) : Window(desc)
 	{
 		this->InitNested(0);
+		RepositionMobileBar();
 	}
 
 	Point OnInitialPosition([[maybe_unused]] int16_t sm_width, [[maybe_unused]] int16_t sm_height, [[maybe_unused]] int window_number) override
@@ -153,10 +154,10 @@ struct MobileBarWindow : Window {
 
 static constexpr std::initializer_list<NWidgetPart> _nested_mobile_bar_widgets = {
 	NWidget(NWID_HORIZONTAL, NWidContainerFlag::EqualSize),
-		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_BUILD), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetStringTip(STR_MOBILE_BAR_BUILD),
-		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_VEHICLES), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetStringTip(STR_MOBILE_BAR_VEHICLES),
-		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_FINANCE), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetStringTip(STR_MOBILE_BAR_FINANCE),
-		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_MENU), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetStringTip(STR_MOBILE_BAR_MENU),
+		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_BUILD), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_BAR_BUILD),
+		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_VEHICLES), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_BAR_VEHICLES),
+		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_FINANCE), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_BAR_FINANCE),
+		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_MENU), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_BAR_MENU),
 	EndContainer(),
 };
 
@@ -262,6 +263,9 @@ void RepositionMobileBar()
 {
 	Window *w = FindWindowById(WindowClass::MobileBar, 0);
 	if (w == nullptr) return;
+	const Touch::SafeInsets &safe = Touch::GetSafeInsets();
+	int area_width = _screen.width - safe.left - safe.right;
+	if (w->width != area_width) ResizeWindow(w, area_width - w->width, 0, false);
 	Point pt = GetMobileBarPosition(w->width, w->height);
 	w->SetDirty();
 	w->left = pt.x;

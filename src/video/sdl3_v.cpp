@@ -250,10 +250,10 @@ bool VideoDriver_SDL_Base::CreateMainWindow(uint w, uint h, uint flags)
 	if (this->sdl_window != nullptr) {
 #	ifdef __ANDROID__
 		/* Android reports its display density (dpi / 160) as the window's display scale. */
-		Touch::Init(SDL_GetWindowDisplayScale(this->sdl_window));
+		Touch::Init(SDL_GetWindowDisplayScale(this->sdl_window), true);
 #	else
-		/* Web: the canvas already works in CSS pixels, i.e. density-independent units. */
-		Touch::Init(1.0f);
+		/* Web: the canvas works in CSS pixels, i.e. density-independent units; a coarse pointer means a finger. */
+		Touch::Init(1.0f, EM_ASM_INT({ return window.matchMedia && window.matchMedia('(pointer: coarse)').matches ? 1 : 0; }) != 0);
 #	endif
 	}
 #endif

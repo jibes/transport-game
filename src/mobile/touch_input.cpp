@@ -89,9 +89,21 @@ static bool _drag_on_main_view = false; ///< The current one-finger drag started
 static Clock::time_point _fling_time;
 static float _fling_rem_x = 0.0f, _fling_rem_y = 0.0f; ///< Sub-pixel remainder of momentum scrolling.
 
-void Init(float density)
+static bool _touch_device = false;
+
+/**
+ * @param density Display density (physical pixels per dp).
+ * @param touch_device Primary input is a finger (phones, tablets); enables finger-sized GUI scaling.
+ */
+void Init(float density, bool touch_device)
 {
 	_density = density > 0.0f ? density : 1.0f;
+	_touch_device = touch_device;
+}
+
+bool IsTouchDevice()
+{
+	return _touch_device;
 }
 
 /**
@@ -136,10 +148,27 @@ float GetDensity()
 	return _density;
 }
 
-/** One GUI pixel per density-independent pixel: the scale Android itself uses for UI. */
+/**
+ * Default GUI scale on phones: 1.5 GUI px per dp. At 1 px/dp (Android's own UI unit) the game's
+ * controls are only 10-14dp, far below the ~40dp a fingertip needs.
+ */
+static constexpr float TOUCH_SCALE_FACTOR = 1.5f;
+/** Largest selectable scale on phones; oversized windows can be slid into view (WindowPan). */
+static constexpr float TOUCH_MAX_SCALE_FACTOR = 2.0f;
+
+static int DensityScale(float factor)
+{
+	return std::min(MAX_INTERFACE_SCALE, static_cast<int>(_density * factor * 100.0f) / 25 * 25);
+}
+
 int GetAutomaticScale()
 {
-	return static_cast<int>(_density * 100.0f) / 25 * 25;
+	return DensityScale(TOUCH_SCALE_FACTOR);
+}
+
+int GetMaximumScale()
+{
+	return DensityScale(TOUCH_MAX_SCALE_FACTOR);
 }
 
 static Finger *FindFinger(uint64_t id)
