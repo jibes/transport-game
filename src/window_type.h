@@ -755,6 +755,12 @@ enum class WindowClass : uint16_t {
 	 */
 	MobileConfirm,
 
+	/**
+	 * Mobile build palette (src/mobile); %Window numbers:
+	 *   - 0 = #BuildPaletteWidgets
+	 */
+	MobilePalette,
+
 	Invalid = 0xFFFF, ///< Invalid window.
 };
 

@@ -16,6 +16,7 @@
 #include "../stdafx.h"
 #include "mobile_bar_gui.h"
 #include "touch_input.h"
+#include "build_palette_gui.h"
 #include "../window_gui.h"
 #include "../window_func.h"
 #include "../gfx_func.h"
@@ -127,7 +128,7 @@ struct MobileBarWindow : Window {
 		switch (widget) {
 			case WID_MB_BUILD:
 				switch (static_cast<BuildEntry>(index)) {
-					case BuildEntry::Rail: ShowBuildRailToolbar(_last_built_railtype); break;
+					case BuildEntry::Rail: ShowRailPalette(); break;
 					case BuildEntry::Road: ShowBuildRoadToolbar(_last_built_roadtype); break;
 					case BuildEntry::Tram: ShowBuildRoadToolbar(_last_built_tramtype); break;
 					case BuildEntry::Water: ShowBuildDocksToolbar(); break;
@@ -282,4 +283,5 @@ void RepositionMobileBar()
 	w->left = pt.x;
 	w->top = pt.y;
 	w->SetDirty();
+	RepositionBuildPalette();
 }

@@ -422,6 +422,7 @@ public:
 	void SetAlignment(Alignment align);
 
 	StringID GetString() const;
+	inline SpriteID GetSprite() const { return this->widget_data.sprite; }
 	WidgetID GetScrollbarIndex() const;
 
 	inline void SetLowered(bool lowered);
