@@ -3541,7 +3541,8 @@ static int PositionWindow(Window *w, WindowClass clss, int setting)
 	int area_left = safe.left;
 	int area_width = _screen.width - safe.left - safe.right;
 	if (clss == WindowClass::MainToolbar) {
-		w->top = safe.top;
+		/* On touch the bottom bar replaces it; parked above the screen it keeps its state and menus. */
+		w->top = Touch::IsToolbarHidden() ? -w->height : safe.top;
 	} else if (clss == WindowClass::Statusbar) {
 		w->top = _screen.height - safe.bottom - w->height;
 	}

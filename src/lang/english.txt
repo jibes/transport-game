@@ -856,7 +856,8 @@ STR_STATUSBAR_TOOLTIP_SHOW_LAST_NEWS                            :{BLACK}Show las
 STR_MOBILE_BAR_BUILD                                            :Build
 STR_MOBILE_BAR_VEHICLES                                         :Vehicles
 STR_MOBILE_BAR_FINANCE                                          :Finance
-STR_MOBILE_BAR_MENU                                             :Menu
+STR_MOBILE_BAR_MAP                                              :Map
+STR_MOBILE_BAR_MENU                                             :More
 STR_MOBILE_BUILD_RAIL                                           :Railway
 STR_MOBILE_BUILD_ROAD                                           :Road
 STR_MOBILE_BUILD_TRAM                                           :Tramway
@@ -868,6 +869,8 @@ STR_MOBILE_VEHICLES_TRAINS                                      :Trains
 STR_MOBILE_VEHICLES_ROAD                                        :Road vehicles
 STR_MOBILE_VEHICLES_SHIPS                                       :Ships
 STR_MOBILE_VEHICLES_AIRCRAFT                                    :Aircraft
+STR_MOBILE_MENU_SHOW_TOOLBAR                                    :Show toolbar
+STR_MOBILE_MENU_HIDE_TOOLBAR                                    :Hide toolbar
 STR_MOBILE_MENU_PAUSE                                           :Pause
 STR_MOBILE_MENU_RESUME                                          :Resume
 STR_MOBILE_MENU_SAVE                                            :Save game

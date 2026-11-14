@@ -113,13 +113,30 @@ bool IsTouchDevice()
  */
 static bool _touch_used = false;
 
+static bool _toolbar_hidden = true; ///< The top toolbar is replaced by the bottom bar on touch; "More" can bring it back.
+
 static void ApplyTouchDefaults()
 {
 	_settings_client.gui.scroll_mode = ViewportScrollMode::MapLMB;
 	if (!_touch_used) {
 		_touch_used = true;
 		ShowMobileBar(); // no-op outside a running game; later games show it from ShowVitalWindows()
+		PositionMainToolbar(nullptr);
+		MarkWholeScreenDirty();
 	}
+}
+
+/** Is the top toolbar moved off-screen (touch play, until the player shows it)? */
+bool IsToolbarHidden()
+{
+	return _touch_used && _toolbar_hidden;
+}
+
+void SetToolbarHidden(bool hidden)
+{
+	_toolbar_hidden = hidden;
+	PositionMainToolbar(nullptr);
+	MarkWholeScreenDirty();
 }
 
 bool IsTouchUsed()

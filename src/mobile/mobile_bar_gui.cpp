@@ -28,6 +28,7 @@
 #include "../road_gui.h"
 #include "../terraform_gui.h"
 #include "../fios.h"
+#include "../smallmap_gui.h"
 #include "../gui.h"
 #include "../openttd.h"
 #include "../command_func.h"
@@ -52,16 +53,17 @@ namespace {
 enum MobileBarWidgets : WidgetID {
 	WID_MB_BUILD,
 	WID_MB_VEHICLES,
+	WID_MB_MAP,
 	WID_MB_FINANCE,
 	WID_MB_MENU,
 };
 
 enum class BuildEntry : int { Rail, Road, Tram, Water, Air, Landscape, Trees };
 enum class VehicleEntry : int { Trains, RoadVehicles, Ships, Aircraft };
-enum class MenuEntry : int { Pause, Save, Load, Settings, ExitToMenu };
+enum class MenuEntry : int { ToggleToolbar, Pause, Save, Load, Settings, ExitToMenu };
 
 /** Minimum button size in GUI pixels; at the mobile GUI scale one GUI pixel is one dp, so ~48dp targets. */
-static constexpr int BUTTON_WIDTH = 56; ///< Minimum; the bar stretches to the full safe width like a native bottom navigation bar.
+static constexpr int BUTTON_WIDTH = 48; ///< Minimum; the bar stretches to the full safe width like a native bottom navigation bar.
 static constexpr int BUTTON_HEIGHT = 30;
 
 struct MobileBarWindow : Window {
@@ -97,11 +99,16 @@ struct MobileBarWindow : Window {
 				list.push_back(MakeDropDownListStringItem(STR_MOBILE_VEHICLES_AIRCRAFT, VehicleEntry::Aircraft));
 				break;
 
+			case WID_MB_MAP:
+				ShowSmallMap();
+				return;
+
 			case WID_MB_FINANCE:
 				ShowCompanyFinances(_local_company);
 				return;
 
 			case WID_MB_MENU:
+				list.push_back(MakeDropDownListStringItem(Touch::IsToolbarHidden() ? STR_MOBILE_MENU_SHOW_TOOLBAR : STR_MOBILE_MENU_HIDE_TOOLBAR, MenuEntry::ToggleToolbar));
 				list.push_back(MakeDropDownListStringItem(_pause_mode.Any() ? STR_MOBILE_MENU_RESUME : STR_MOBILE_MENU_PAUSE, MenuEntry::Pause));
 				list.push_back(MakeDropDownListStringItem(STR_MOBILE_MENU_SAVE, MenuEntry::Save));
 				list.push_back(MakeDropDownListStringItem(STR_MOBILE_MENU_LOAD, MenuEntry::Load));
@@ -138,6 +145,9 @@ struct MobileBarWindow : Window {
 
 			case WID_MB_MENU:
 				switch (static_cast<MenuEntry>(index)) {
+					case MenuEntry::ToggleToolbar:
+						Touch::SetToolbarHidden(!Touch::IsToolbarHidden());
+						break;
 					case MenuEntry::Pause:
 						if (_networking && !_network_server) break; // only the server can pause
 						if (Command<Commands::Pause>::Post(PauseMode::Normal, _pause_mode.None())) SndConfirmBeep();
@@ -156,6 +166,7 @@ static constexpr std::initializer_list<NWidgetPart> _nested_mobile_bar_widgets =
 	NWidget(NWID_HORIZONTAL, NWidContainerFlag::EqualSize),
 		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_BUILD), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_BAR_BUILD),
 		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_VEHICLES), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_BAR_VEHICLES),
+		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_MAP), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_BAR_MAP),
 		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_FINANCE), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_BAR_FINANCE),
 		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_MENU), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_BAR_MENU),
 	EndContainer(),

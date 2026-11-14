@@ -34,6 +34,8 @@ void SetSafeInsets(const SafeInsets &insets);
 const SafeInsets &GetSafeInsets();
 float GetDensity();
 bool IsTouchUsed();
+bool IsToolbarHidden();
+void SetToolbarHidden(bool hidden);
 uint32_t GetMinItemHeight();
 int GetAutomaticScale();
 int GetMaximumScale();
