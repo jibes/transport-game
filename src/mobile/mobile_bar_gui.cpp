@@ -347,3 +347,51 @@ bool ShowMapContextMenu(int x, int y)
 	ShowDropDownListAt(bar, std::move(list), -1, WID_MB_CONTEXT, anchor, Colours::Grey);
 	return true;
 }
+
+/**
+ * Window placement on touch: every game window opens as a "sheet" just above the bottom
+ * action row (and above an open palette or confirm bar), centred, or left-aligned if wider than the
+ * screen. Predictable, within thumb reach, and never under the finger that opened it.
+ * Chrome that positions itself (bars, palettes, parked toolbars, dropdowns, tooltips, news) is excluded.
+ */
+bool IsSheetWindow(WindowClass cls)
+{
+	switch (cls) {
+		case WindowClass::MainWindow:
+		case WindowClass::MainToolbar:
+		case WindowClass::Statusbar:
+		case WindowClass::MobileBar:
+		case WindowClass::MobilePalette:
+		case WindowClass::MobileConfirm:
+		case WindowClass::BuildToolbar:
+		case WindowClass::ScenarioGenerateLandscape:
+		case WindowClass::DropdownMenu:
+		case WindowClass::ToolTips:
+		case WindowClass::News:
+		case WindowClass::Bootstrap:
+		case WindowClass::SelectGame: // the main menu centres itself over the title animation
+			return false;
+		default:
+			return true;
+	}
+}
+
+/** Top edge of the bottom chrome stack (navigation/palette, confirm bar), i.e. where sheets end. */
+static int GetSheetBottom()
+{
+	int bottom = GetActionRowBottom();
+	for (WindowClass cls : {WindowClass::MobileBar, WindowClass::MobilePalette, WindowClass::MobileConfirm}) {
+		const Window *w = FindWindowById(cls, 0);
+		if (w != nullptr && w->top < _screen.height) bottom = std::min(bottom, w->top);
+	}
+	return bottom;
+}
+
+Point GetSheetPosition(int width, int height)
+{
+	const Touch::SafeInsets &safe = Touch::GetSafeInsets();
+	int area_width = _screen.width - safe.left - safe.right;
+	int x = safe.left + std::max(0, (area_width - width) / 2);
+	int y = std::max(safe.top, GetSheetBottom() - height);
+	return {x, y};
+}

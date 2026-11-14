@@ -11,12 +11,15 @@
 #define MOBILE_BAR_GUI_H
 
 #include "../core/geometry_type.hpp"
+#include "../window_type.h"
 
 void ShowMobileBar();
 bool ShowMapContextMenu(int x, int y);
 void RepositionMobileBar();
 Point GetMobileBarPosition(int width, int height);
 int GetActionRowBottom();
+bool IsSheetWindow(WindowClass cls);
+Point GetSheetPosition(int width, int height);
 
 /** Result of a touch on the build confirmation window. */
 enum class ConfirmHit : uint8_t { None, Build, Cancel };
