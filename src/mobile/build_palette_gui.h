@@ -17,6 +17,7 @@ enum class PaletteMode : uint8_t { Rail, Road, Tram, Water, Air, Landscape, End 
 
 void ShowBuildPalette(PaletteMode mode);
 void RepositionBuildPalette();
+bool IsBuildPaletteOpen();
 Point GetBuildPalettePosition(int width, int height);
 
 #endif /* MOBILE_BUILD_PALETTE_GUI_H */

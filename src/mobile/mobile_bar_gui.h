@@ -16,6 +16,7 @@ void ShowMobileBar();
 bool ShowMapContextMenu(int x, int y);
 void RepositionMobileBar();
 Point GetMobileBarPosition(int width, int height);
+int GetActionRowBottom();
 
 /** Result of a touch on the build confirmation window. */
 enum class ConfirmHit : uint8_t { None, Build, Cancel };

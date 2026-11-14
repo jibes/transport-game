@@ -145,6 +145,15 @@ bool IsTouchUsed()
 	return _touch_used;
 }
 
+/**
+ * Size of a tappable control in screen pixels: 48dp, the smallest reliable finger target.
+ * Independent of the GUI scale, so information can stay compact while actions stay big.
+ */
+int TouchTargetPx()
+{
+	return std::max(1, static_cast<int>(48.0f * _density + 0.5f));
+}
+
 /** Minimum height of list rows (dropdowns) for touch; 28 GUI units is 28dp at the mobile GUI scale. */
 uint32_t GetMinItemHeight()
 {

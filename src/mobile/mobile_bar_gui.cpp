@@ -48,6 +48,7 @@
 #include "../rail_type.h"
 #include "../road_type.h"
 #include "../zoom_func.h"
+#include "../table/sprites.h"
 #include "../core/math_func.hpp"
 
 #include "table/strings.h"
@@ -77,8 +78,6 @@ enum class ContextEntry : int { Info, Centre, Station, Town, Demolish };
 static TileIndex _context_tile = INVALID_TILE; ///< Tile the long-press context menu was opened on.
 
 /** Minimum button size in GUI pixels; at the mobile GUI scale one GUI pixel is one dp, so ~48dp targets. */
-static constexpr int BUTTON_WIDTH = 48; ///< Minimum; the bar stretches to the full safe width like a native bottom navigation bar.
-static constexpr int BUTTON_HEIGHT = 30;
 
 struct MobileBarWindow : Window {
 	MobileBarWindow(WindowDesc &desc) : Window(desc)
@@ -90,6 +89,14 @@ struct MobileBarWindow : Window {
 	Point OnInitialPosition([[maybe_unused]] int16_t sm_width, [[maybe_unused]] int16_t sm_height, [[maybe_unused]] int window_number) override
 	{
 		return GetMobileBarPosition(sm_width, sm_height);
+	}
+
+	void UpdateWidgetSize(WidgetID widget, Dimension &size, [[maybe_unused]] const Dimension &padding, [[maybe_unused]] Dimension &fill, [[maybe_unused]] Dimension &resize) override
+	{
+		if (widget < WID_MB_BUILD || widget > WID_MB_MENU) return;
+		int t = Touch::TouchTargetPx();
+		size.width = std::max<uint>(size.width, t);
+		size.height = std::max<uint>(size.height, t);
 	}
 
 	void OnClick([[maybe_unused]] Point pt, WidgetID widget, [[maybe_unused]] int click_count) override
@@ -195,13 +202,14 @@ struct MobileBarWindow : Window {
 	}
 };
 
+/** Icons only (names are tooltips, shown on long-press); each a finger-sized square, together spanning the width. */
 static constexpr std::initializer_list<NWidgetPart> _nested_mobile_bar_widgets = {
 	NWidget(NWID_HORIZONTAL, NWidContainerFlag::EqualSize),
-		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_BUILD), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_BAR_BUILD),
-		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_VEHICLES), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_BAR_VEHICLES),
-		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_MAP), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_BAR_MAP),
-		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_FINANCE), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_BAR_FINANCE),
-		NWidget(WWT_PUSHTXTBTN, Colours::Grey, WID_MB_MENU), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetResize(1, 0), SetStringTip(STR_MOBILE_BAR_MENU),
+		NWidget(WWT_PUSHIMGBTN, Colours::Grey, WID_MB_BUILD), SetFill(1, 1), SetResize(1, 0), SetSpriteTip(SPR_IMG_BUILDRAIL, STR_MOBILE_BAR_BUILD),
+		NWidget(WWT_PUSHIMGBTN, Colours::Grey, WID_MB_VEHICLES), SetFill(1, 1), SetResize(1, 0), SetSpriteTip(SPR_IMG_TRAINLIST, STR_MOBILE_BAR_VEHICLES),
+		NWidget(WWT_PUSHIMGBTN, Colours::Grey, WID_MB_MAP), SetFill(1, 1), SetResize(1, 0), SetSpriteTip(SPR_IMG_SMALLMAP, STR_MOBILE_BAR_MAP),
+		NWidget(WWT_PUSHIMGBTN, Colours::Grey, WID_MB_FINANCE), SetFill(1, 1), SetResize(1, 0), SetSpriteTip(SPR_IMG_COMPANY_FINANCE, STR_MOBILE_BAR_FINANCE),
+		NWidget(WWT_PUSHIMGBTN, Colours::Grey, WID_MB_MENU), SetFill(1, 1), SetResize(1, 0), SetSpriteTip(SPR_IMG_SETTINGS, STR_MOBILE_BAR_MENU),
 	EndContainer(),
 };
 
@@ -243,6 +251,14 @@ struct MobileConfirmWindow : Window {
 		return {x, y};
 	}
 
+	void UpdateWidgetSize(WidgetID widget, Dimension &size, [[maybe_unused]] const Dimension &padding, [[maybe_unused]] Dimension &fill, [[maybe_unused]] Dimension &resize) override
+	{
+		if (widget != WID_MC_BUILD && widget != WID_MC_CANCEL) return;
+		int t = Touch::TouchTargetPx();
+		size.width = std::max<uint>(size.width, 2 * t);
+		size.height = std::max<uint>(size.height, t);
+	}
+
 	ConfirmHit HitTest(int x, int y) const
 	{
 		for (WidgetID id : {WID_MC_BUILD, WID_MC_CANCEL}) {
@@ -255,8 +271,8 @@ struct MobileConfirmWindow : Window {
 
 static constexpr std::initializer_list<NWidgetPart> _nested_mobile_confirm_widgets = {
 	NWidget(NWID_HORIZONTAL, NWidContainerFlag::EqualSize),
-		NWidget(WWT_PUSHTXTBTN, Colours::DarkGreen, WID_MC_BUILD), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetStringTip(STR_MOBILE_CONFIRM_BUILD),
-		NWidget(WWT_PUSHTXTBTN, Colours::Red, WID_MC_CANCEL), SetMinimalSize(BUTTON_WIDTH, BUTTON_HEIGHT), SetFill(1, 1), SetStringTip(STR_MOBILE_CONFIRM_CANCEL),
+		NWidget(WWT_PUSHTXTBTN, Colours::DarkGreen, WID_MC_BUILD), SetFill(1, 1), SetStringTip(STR_MOBILE_CONFIRM_BUILD),
+		NWidget(WWT_PUSHTXTBTN, Colours::Red, WID_MC_CANCEL), SetFill(1, 1), SetStringTip(STR_MOBILE_CONFIRM_CANCEL),
 	EndContainer(),
 };
 
@@ -286,14 +302,24 @@ ConfirmHit GetBuildConfirmHit(int x, int y)
 	return w != nullptr ? w->HitTest(x, y) : ConfirmHit::None;
 }
 
-/** Bottom centre of the safe area, directly above the status bar. */
+/**
+ * Bottom of the action row: above the gesture/navigation inset (where taps are unreliable) and above
+ * the status bar. The status bar itself is information only, so it may sit inside that inset.
+ */
+int GetActionRowBottom()
+{
+	int bottom = _screen.height - Touch::GetSafeInsets().bottom;
+	if (const Window *status = FindWindowById(WindowClass::Statusbar, 0); status != nullptr) bottom = std::min(bottom, status->top);
+	return bottom;
+}
+
+/** In the action row, or parked below the screen while a build palette occupies that row. */
 Point GetMobileBarPosition(int width, int height)
 {
 	const Touch::SafeInsets &safe = Touch::GetSafeInsets();
-	const Window *status = FindWindowById(WindowClass::Statusbar, 0);
-	int bottom = _screen.height - safe.bottom - (status != nullptr ? status->height : 0);
 	int area_width = _screen.width - safe.left - safe.right;
-	return {safe.left + (area_width - width) / 2, bottom - height};
+	if (IsBuildPaletteOpen()) return {safe.left, _screen.height + 1};
+	return {safe.left + (area_width - width) / 2, GetActionRowBottom() - height};
 }
 
 void ShowMobileBar()

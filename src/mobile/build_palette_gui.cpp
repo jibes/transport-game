@@ -35,6 +35,7 @@
 #include "../gui.h"
 #include "../zoom_func.h"
 #include "../core/math_func.hpp"
+#include "../table/sprites.h"
 
 #include "table/strings.h"
 
@@ -47,7 +48,7 @@ extern RoadType _last_built_tramtype;
 namespace {
 
 enum BuildPaletteWidgets : WidgetID {
-	WID_BP_CAPTION,
+	WID_BP_CLOSE,
 	WID_BP_TOOL_FIRST, ///< First tool button; tools follow in the order of the current mode's tool table.
 };
 
@@ -149,18 +150,26 @@ static int NumTools()
 	return static_cast<int>(CurrentKind().tools.size());
 }
 
-static constexpr int TOOL_WIDTH = 80;
-static constexpr int TOOL_HEIGHT = 30;
-static constexpr int TOOL_SLOT_WIDTH = 130; ///< GUI units per column (icon + label); decides the column count.
+static bool _palette_open = false; ///< A palette occupies the bottom action row.
+static int _palette_columns = 5; ///< Columns of the palette being built (MakeToolGrid reads it).
 
-static int _palette_columns = 3; ///< Columns of the palette being built (MakeToolGrid reads it).
+/** Cells: close button plus tools. */
+static int NumCells()
+{
+	return NumTools() + 1;
+}
 
-/** As many columns as fit the safe width: 2 in portrait, 3-5 in landscape. */
+/**
+ * Fewest rows of finger-sized icons that fit the safe width, then the columns spread evenly
+ * over those rows (e.g. 10 cells in portrait: 2 rows of 5, not 8 + 2).
+ */
 static int ColumnsForScreen()
 {
 	const Touch::SafeInsets &safe = Touch::GetSafeInsets();
 	int area_width = _screen.width - safe.left - safe.right;
-	return Clamp(area_width / ScaleGUITrad(TOOL_SLOT_WIDTH), 2, 5);
+	int per_row = std::max(1, area_width / Touch::TouchTargetPx());
+	int rows = CeilDiv(NumCells(), per_row);
+	return CeilDiv(NumCells(), rows);
 }
 
 /** The parked construction toolbar the palette drives, if still open. */
@@ -188,7 +197,6 @@ struct BuildPaletteWindow : Window {
 	BuildPaletteWindow(WindowDesc &desc) : Window(desc), columns(_palette_columns)
 	{
 		this->CreateNestedTree();
-		this->GetWidget<NWidgetCore>(WID_BP_CAPTION)->SetString(CurrentKind().caption);
 		/* Same icons as the toolbar (they depend on the rail type). */
 		if (const Window *rt = GetToolbar(); rt != nullptr) {
 			for (int i = 0; i < NumTools(); i++) {
@@ -205,11 +213,21 @@ struct BuildPaletteWindow : Window {
 		return GetBuildPalettePosition(sm_width, sm_height);
 	}
 
+	void UpdateWidgetSize(WidgetID widget, Dimension &size, [[maybe_unused]] const Dimension &padding, [[maybe_unused]] Dimension &fill, [[maybe_unused]] Dimension &resize) override
+	{
+		if (widget < WID_BP_CLOSE || widget >= WID_BP_TOOL_FIRST + NumTools()) return;
+		int t = Touch::TouchTargetPx();
+		size.width = std::max<uint>(size.width, t);
+		size.height = std::max<uint>(size.height, t);
+	}
+
 	void Close(int data = 0) override
 	{
 		if (!this->keep_toolbar) {
 			const PaletteKind &kind = CurrentKind();
 			CloseWindowById(kind.toolbar_class, kind.toolbar_number);
+			_palette_open = false;
+			RepositionMobileBar(); // bring the navigation back into the bottom row
 		}
 		this->Window::Close(data);
 	}
@@ -228,7 +246,7 @@ struct BuildPaletteWindow : Window {
 	{
 		const Window *rt = GetToolbar();
 		if (rt == nullptr) {
-			this->Window::Close();
+			this->Close();
 			return;
 		}
 		ParkToolbar(const_cast<Window *>(rt));
@@ -253,20 +271,24 @@ static std::unique_ptr<NWidgetBase> MakeToolGrid()
 {
 	auto grid = std::make_unique<NWidgetVertical>(NWidContainerFlag::EqualSize);
 	std::unique_ptr<NWidgetHorizontal> row;
-	for (int i = 0; i < NumTools(); i++) {
+	for (int i = 0; i < NumCells(); i++) {
 		if (i % _palette_columns == 0) row = std::make_unique<NWidgetHorizontal>(NWidContainerFlag::EqualSize);
-		auto button = std::make_unique<NWidgetLeaf>(WWT_IMGTEXTBTN, Colours::DarkGreen, WID_BP_TOOL_FIRST + i, WidgetData{.string = CurrentKind().tools[i].label}, STR_NULL);
-		button->SetMinimalSize(TOOL_WIDTH, TOOL_HEIGHT);
-		button->SetFill(1, 1);
-		button->SetResize(1, 0);
-		button->SetAlignment({AlignmentH::Start, AlignmentV::Middle});
-		row->Add(std::move(button));
+		std::unique_ptr<NWidgetLeaf> cell;
+		if (i == 0) {
+			/* Close is a cell like any tool: same size, first position. */
+			cell = std::make_unique<NWidgetLeaf>(WWT_CLOSEBOX, Colours::DarkGreen, WID_BP_CLOSE, WidgetData{}, STR_TOOLTIP_CLOSE_WINDOW);
+		} else {
+			/* Icon only; the name is the tooltip (long-press). Sprite is copied from the toolbar. */
+			cell = std::make_unique<NWidgetLeaf>(WWT_IMGBTN, Colours::DarkGreen, WID_BP_TOOL_FIRST + i - 1, WidgetData{}, CurrentKind().tools[i - 1].label);
+		}
+		cell->SetFill(1, 1);
+		cell->SetResize(1, 0);
+		row->Add(std::move(cell));
 		if (i % _palette_columns == _palette_columns - 1) {
 			grid->Add(std::move(row));
-		} else if (i == NumTools() - 1) {
-			/* Pad the last row so its buttons keep the same width as the rows above. */
+		} else if (i == NumCells() - 1) {
 			for (int pad = i % _palette_columns + 1; pad < _palette_columns; pad++) {
-				auto spacer = std::make_unique<NWidgetSpacer>(TOOL_WIDTH, TOOL_HEIGHT);
+				auto spacer = std::make_unique<NWidgetSpacer>(0, 0);
 				spacer->SetFill(1, 1);
 				spacer->SetResize(1, 0);
 				row->Add(std::move(spacer));
@@ -278,10 +300,6 @@ static std::unique_ptr<NWidgetBase> MakeToolGrid()
 }
 
 static constexpr std::initializer_list<NWidgetPart> _nested_build_palette_widgets = {
-	NWidget(NWID_HORIZONTAL),
-		NWidget(WWT_CLOSEBOX, Colours::DarkGreen),
-		NWidget(WWT_CAPTION, Colours::DarkGreen, WID_BP_CAPTION), SetStringTip(STR_NULL), SetTextStyle(TextColour::White),
-	EndContainer(),
 	NWidget(WWT_PANEL, Colours::DarkGreen),
 		NWidgetFunction(MakeToolGrid),
 	EndContainer(),
@@ -296,22 +314,22 @@ static WindowDesc _build_palette_desc(
 
 } // namespace
 
-/** Full safe width, directly above the bottom bar. */
+/** Full safe width, in the bottom action row (the navigation steps aside while a palette is open). */
 Point GetBuildPalettePosition([[maybe_unused]] int width, int height)
 {
-	const Touch::SafeInsets &safe = Touch::GetSafeInsets();
-	int bottom = _screen.height - safe.bottom;
-	if (const Window *bar = FindWindowById(WindowClass::MobileBar, 0); bar != nullptr) {
-		bottom = bar->top;
-	} else if (const Window *status = FindWindowById(WindowClass::Statusbar, 0); status != nullptr) {
-		bottom = status->top;
-	}
-	return {safe.left, bottom - height};
+	return {Touch::GetSafeInsets().left, GetActionRowBottom() - height};
+}
+
+bool IsBuildPaletteOpen()
+{
+	return _palette_open;
 }
 
 static void OpenPaletteWindow()
 {
 	_palette_columns = ColumnsForScreen();
+	_palette_open = true;
+	RepositionMobileBar(); // park the navigation; the palette takes its row
 	new BuildPaletteWindow(_build_palette_desc);
 }
 

@@ -3544,7 +3544,8 @@ static int PositionWindow(Window *w, WindowClass clss, int setting)
 		/* On touch the bottom bar replaces it; parked above the screen it keeps its state and menus. */
 		w->top = Touch::IsToolbarHidden() ? -w->height : safe.top;
 	} else if (clss == WindowClass::Statusbar) {
-		w->top = _screen.height - safe.bottom - w->height;
+		/* Information only: it may use the gesture/navigation inset, leaving the safe area to actions. */
+		w->top = _screen.height - w->height;
 	}
 #else
 	const int area_left = 0;
