@@ -30,6 +30,15 @@
 #include "../terraform_gui.h"
 #include "../fios.h"
 #include "../smallmap_gui.h"
+#include "../viewport_func.h"
+#include "../station_gui.h"
+#include "../station_func.h"
+#include "../town.h"
+#include "../station_map.h"
+#include "../town_map.h"
+#include "../tile_map.h"
+#include "../map_func.h"
+#include "../landscape_cmd.h"
 #include "../gui.h"
 #include "../openttd.h"
 #include "../command_func.h"
@@ -57,11 +66,15 @@ enum MobileBarWidgets : WidgetID {
 	WID_MB_MAP,
 	WID_MB_FINANCE,
 	WID_MB_MENU,
+	WID_MB_CONTEXT, ///< Not a real widget: id of the long-press map context menu dropdown.
 };
 
 enum class BuildEntry : int { Rail, Road, Tram, Water, Air, Landscape, Trees };
 enum class VehicleEntry : int { Trains, RoadVehicles, Ships, Aircraft };
 enum class MenuEntry : int { ToggleToolbar, Pause, Save, Load, Settings, ExitToMenu };
+enum class ContextEntry : int { Info, Centre, Station, Town, Demolish };
+
+static TileIndex _context_tile = INVALID_TILE; ///< Tile the long-press context menu was opened on.
 
 /** Minimum button size in GUI pixels; at the mobile GUI scale one GUI pixel is one dp, so ~48dp targets. */
 static constexpr int BUTTON_WIDTH = 48; ///< Minimum; the bar stretches to the full safe width like a native bottom navigation bar.
@@ -123,9 +136,28 @@ struct MobileBarWindow : Window {
 		ShowDropDownList(this, std::move(list), -1, widget);
 	}
 
+	void OnDropdownClose(Point pt, WidgetID widget, int index, int click_result, bool instant_close) override
+	{
+		if (widget == WID_MB_CONTEXT) return; // no button to raise
+		this->Window::OnDropdownClose(pt, widget, index, click_result, instant_close);
+	}
+
 	void OnDropdownSelect(WidgetID widget, int index, [[maybe_unused]] int click_result) override
 	{
 		switch (widget) {
+			case WID_MB_CONTEXT:
+				if (!IsValidTile(_context_tile)) break;
+				switch (static_cast<ContextEntry>(index)) {
+					case ContextEntry::Info: ShowLandInfo(_context_tile); break;
+					case ContextEntry::Centre: ScrollMainWindowToTile(_context_tile); break;
+					case ContextEntry::Station: ShowStationViewWindow(GetStationIndex(_context_tile)); break;
+					case ContextEntry::Town: ShowTownViewWindow(GetTownIndex(_context_tile)); break;
+					case ContextEntry::Demolish:
+						Command<Commands::LandscapeClear>::Post(STR_ERROR_CAN_T_CLEAR_THIS_AREA, _context_tile);
+						break;
+				}
+				break;
+
 			case WID_MB_BUILD:
 				switch (static_cast<BuildEntry>(index)) {
 					case BuildEntry::Rail: ShowBuildPalette(PaletteMode::Rail); break;
@@ -284,4 +316,34 @@ void RepositionMobileBar()
 	w->top = pt.y;
 	w->SetDirty();
 	RepositionBuildPalette();
+}
+
+/**
+ * Long-press on the map (no construction tool active): a context menu for the tile under the finger.
+ * @return Whether the menu was shown (otherwise the caller falls back to a right click).
+ */
+bool ShowMapContextMenu(int x, int y)
+{
+	Window *bar = FindWindowById(WindowClass::MobileBar, 0);
+	Window *main = GetMainWindow();
+	if (bar == nullptr || main == nullptr || FindWindowFromPt(x, y) != main) return false;
+	const Viewport *vp = IsPtInWindowViewport(main, x, y);
+	if (vp == nullptr) return false;
+	Point pt = TranslateXYToTileCoord(*vp, x, y);
+	if (pt.x < 0 || pt.y < 0) return false;
+	TileIndex tile = TileVirtXY(pt.x, pt.y);
+	if (!IsValidTile(tile)) return false;
+	_context_tile = tile;
+
+	DropDownList list;
+	list.push_back(MakeDropDownListStringItem(STR_MOBILE_CONTEXT_INFO, ContextEntry::Info));
+	list.push_back(MakeDropDownListStringItem(STR_MOBILE_CONTEXT_CENTRE, ContextEntry::Centre));
+	if (IsTileType(tile, TileType::Station)) list.push_back(MakeDropDownListStringItem(STR_MOBILE_CONTEXT_STATION, ContextEntry::Station));
+	if (IsTileType(tile, TileType::House)) list.push_back(MakeDropDownListStringItem(STR_MOBILE_CONTEXT_TOWN, ContextEntry::Town));
+	list.push_back(MakeDropDownListStringItem(STR_MOBILE_CONTEXT_DEMOLISH, ContextEntry::Demolish));
+
+	/* Anchor at the finger (relative to the bar, the dropdown's parent). */
+	Rect anchor{x - bar->left, y - bar->top, x - bar->left + 1, y - bar->top + 1};
+	ShowDropDownListAt(bar, std::move(list), -1, WID_MB_CONTEXT, anchor, Colours::Grey);
+	return true;
 }

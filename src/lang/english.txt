@@ -879,6 +879,11 @@ STR_MOBILE_MENU_SETTINGS                                        :Settings
 STR_MOBILE_MENU_EXIT                                            :Exit to main menu
 STR_MOBILE_CONFIRM_BUILD                                        :{WHITE}Build
 STR_MOBILE_CONFIRM_CANCEL                                       :{WHITE}Cancel
+STR_MOBILE_CONTEXT_INFO                                         :Info
+STR_MOBILE_CONTEXT_CENTRE                                       :Centre here
+STR_MOBILE_CONTEXT_STATION                                      :Station details
+STR_MOBILE_CONTEXT_TOWN                                         :Town details
+STR_MOBILE_CONTEXT_DEMOLISH                                     :Demolish
 STR_MOBILE_TOOL_TRACK                                           :Track
 STR_MOBILE_TOOL_STATION                                         :Station
 STR_MOBILE_TOOL_DEPOT                                           :Depot

@@ -13,6 +13,7 @@
 #include "../core/geometry_type.hpp"
 
 void ShowMobileBar();
+bool ShowMapContextMenu(int x, int y);
 void RepositionMobileBar();
 Point GetMobileBarPosition(int width, int height);
 

@@ -27,6 +27,7 @@
 #include "../settings_type.h"
 #include "../vehicle_type.h"
 #include "../widget_type.h"
+#include "../tilehighlight_func.h"
 #include "../core/math_func.hpp"
 #include "mobile_bar_gui.h"
 
@@ -640,7 +641,11 @@ void Update()
 	if (_state != State::Pending || _fingers.size() != 1) return;
 	if (Clock::now() - _down_time < LONG_PRESS) return;
 	const Finger &f = _fingers[0];
-	Click(ControlInput::Right, f.x, f.y);
+	/* On the bare map, long-press opens a context menu for the tile; elsewhere it is a right click. */
+	bool tool_active = _thd.place_mode != HT_NONE;
+	if (tool_active || !ShowMapContextMenu(static_cast<int>(f.x), static_cast<int>(f.y))) {
+		Click(ControlInput::Right, f.x, f.y);
+	}
 	_state = State::LongPressed;
 }
 
