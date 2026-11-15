@@ -69,6 +69,50 @@ Priority order by usage: viewport gestures → construction → vehicle/orders/d
 - **WASM threads** need cross-origin isolation; GitHub Pages lacks headers → `coi-serviceworker` shim or alternate host.
 - **Thermal throttling** on long sessions → fps cap + idle throttling.
 
-## Open questions
-- Portrait support in v1, or landscape-only? (Proposed: landscape v1, portrait M5.)
-- App name/branding: must differ from "OpenTTD" trademark-wise unless upstream agrees.
+## Decisions (2026-11)
+- **Audience:** newcomers first. Assists on by default; a "Classic" switch turns them off.
+- **Upstream:** rebaseable. New UI lives in `src/mobile/`; upstream files get only small, `WITH_MOBILE_GUI`-guarded hooks.
+- **Orientation:** portrait and landscape are equal. Every flow is tested in both.
+- **Multiplayer:** not needed now, but kept possible. Every action is a standard command and nothing is client-only that changes game state, so there is no snapshot undo; preview, confirm and "remove last build" instead.
+- **Name:** "Transport Mobile" is a placeholder. Strings are English first.
+
+## UX v2: fun-first design
+
+**Model:** Perceive → **Decide** → Act → Feedback. Fun lives in *Decide* and in learning from *Feedback*. *Perceive* and *Act* are costs to minimise.
+
+**Automation line:** automate a step only if a skilled player would not choose differently there. Where there is a real trade-off, show the options and their consequences, and let the player choose.
+
+**Rules:**
+1. Decisions stay with the player; the game never computes "the answer".
+2. Information appears where the decision is made: tap a thing to get its card; overlays replace windows.
+3. Input states intent (A→B, add a stop, double a line); the game carries out the mechanics.
+4. Everything is previewed with its cost before it happens, and can be reverted.
+5. Feedback comes back where the action happened: profit per line, "why" notes.
+6. Effort follows frequency: frequent actions take 1 tap, rare ones 2–3 via More….
+7. Sessions fit a phone: autosave when the app goes to the background, easy pause.
+
+| Decision | What the player sees | How the player acts | What the player learns |
+|---|---|---|---|
+| Where to serve | supply/demand overlay; town and industry cards | — | — |
+| How to connect | route alternatives with cost, length and slopes | tap A and B, pick an alternative, drag via points, ✓ | "why it costs more" note |
+| What vehicles | comparison view next to the cargo waiting | buy, `– n +` wagons | load-factor bar |
+| When to expand | cash trend, alerts | one-tap actions on alerts | income per line |
+| What to fix | problems inbox | jump there, quick fixes | badge clears |
+
+## Implementation plan v2
+
+| Phase | Item | Hook into upstream | Effort |
+|---|---|---|---|
+| **0. Tests** | Deterministic map seed via a URL parameter (`?seed=`) on the Web build; touch test scripts in `tests/mobile/` running portrait and landscape | `os/emscripten/pre.js` / shell passes arguments | S |
+| **A. Foundation** | A1: autosave when the app goes to the background, and a "Continue" button on the main menu | SDL background events | S |
+| | A2: tap-to-select **cards** (vehicle, station, depot, town, industry) with information, 48 dp actions, and "More…" for the original window | one-line hooks before the game opens its vehicle, station, depot, town and industry windows | M |
+| | A3: assists settings with a Guided/Classic master switch | — | S |
+| **B. Building** | B1: **auto-route** planner (A* over rail track pieces, bridges, existing own track at no cost), 3 weightings (cheap, balanced, straight), route preview, total cost from the game's cost check, build via the normal track and bridge commands | a viewport overlay hook to draw the route | M–L |
+| | B2: station placement with coverage shown live, and size and rotation in the card instead of the small pickers | — | M |
+| **C. Vehicles** | C1: orders by tapping stations on the map (route mode) | — | M |
+| | C2: vehicle comparison view, wagon stepper, depot card | — | M |
+| **D. Feedback** | D1: supply/demand and cargo-flow overlays (reuse the game's cargo-flow overlay) | — | M |
+| | D2: profit per line, problems inbox, "why" notes | — | M |
+| **E. Onboarding** | E1: first-run guided scenario (connect two towns), built from the same cards and flows | — | M |
+
+Order: 0 → A1 → A2 → B1 → C1/C2 → D → B2 → E. Each item goes on a feature branch, passes CI (Android emulator check and Web), then merges into `main`, which publishes it to Obtainium and Pages.
