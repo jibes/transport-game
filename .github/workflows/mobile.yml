@@ -16,19 +16,19 @@ jobs:
   android:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
-    - uses: actions/setup-java@v4
+    - uses: actions/setup-java@v6
       with:
         distribution: temurin
         java-version: 17
 
-    - uses: gradle/actions/setup-gradle@v4
+    - uses: gradle/actions/setup-gradle@v6
       with:
         gradle-version: '8.14.3'
 
     - name: Cache deps
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: build-android-deps
         key: android-deps-${{ hashFiles('os/android/build.sh') }}
@@ -38,7 +38,7 @@ jobs:
         export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME"
         os/android/build.sh arm64-v8a x86_64
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: android-apk
         path: os/android/app/build/outputs/apk/debug/*.apk
@@ -60,7 +60,7 @@ jobs:
     needs: android
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: android-apk
         path: apk
@@ -89,7 +89,7 @@ jobs:
           grep -E " openttd |TransportMobile|AndroidRuntime|F DEBUG" logcat.txt | tail -n 300 || true
           if grep -E "openttd : Error:|F DEBUG|FATAL EXCEPTION" logcat.txt; then echo "SMOKE: FAILED"; exit 1; fi
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: android-smoke
@@ -102,7 +102,7 @@ jobs:
     container:
       image: emscripten/emsdk:6.0.1
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Build
       run: |
@@ -123,12 +123,12 @@ jobs:
         cp build-web/openttd.html site/index.html
         cp build-web/openttd.js build-web/openttd.wasm build-web/openttd.data site/
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: web
         path: site
 
-    - uses: actions/upload-pages-artifact@v3
+    - uses: actions/upload-pages-artifact@v5
       with:
         path: site
 
@@ -145,4 +145,4 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
     - id: deploy
-      uses: actions/deploy-pages@v4
+      uses: actions/deploy-pages@v5
