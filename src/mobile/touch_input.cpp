@@ -91,6 +91,7 @@ static Clock::time_point _fling_time;
 static float _fling_rem_x = 0.0f, _fling_rem_y = 0.0f; ///< Sub-pixel remainder of momentum scrolling.
 
 static bool _touch_device = false;
+static bool _touch_used = false; ///< Touch layout active (touch device, or a touch seen).
 
 /**
  * @param density Display density (physical pixels per dp).
@@ -100,6 +101,8 @@ void Init(float density, bool touch_device)
 {
 	_density = density > 0.0f ? density : 1.0f;
 	_touch_device = touch_device;
+	/* A phone or tablet starts in the touch layout; elsewhere it switches on with the first touch. */
+	if (touch_device) _touch_used = true;
 }
 
 bool IsTouchDevice()
@@ -112,7 +115,6 @@ bool IsTouchDevice()
  * Applied on first touch rather than in Init: the full config is loaded after the video driver
  * starts and would overwrite it; this also leaves mouse users on the Web build untouched.
  */
-static bool _touch_used = false;
 
 static bool _toolbar_hidden = true; ///< The top toolbar is replaced by the bottom bar on touch; "More" can bring it back.
 

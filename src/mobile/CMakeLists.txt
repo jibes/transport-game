@@ -1,6 +1,8 @@
 add_files(
     build_palette_gui.cpp
     build_palette_gui.h
+    lifecycle.cpp
+    lifecycle.h
     mobile_bar_gui.cpp
     mobile_bar_gui.h
     touch_input.cpp

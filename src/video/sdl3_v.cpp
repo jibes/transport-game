@@ -32,6 +32,7 @@
 #ifdef WITH_MOBILE_GUI
 #	include "../mobile/touch_input.h"
 #	include "../mobile/mobile_bar_gui.h"
+#	include "../mobile/lifecycle.h"
 #endif
 
 #include "../safeguards.h"
@@ -247,6 +248,13 @@ bool VideoDriver_SDL_Base::CreateMainWindow(uint w, uint h, uint flags)
 	this->sdl_window = SDL_CreateWindow(caption.c_str(), w, h, flags);
 
 #ifdef WITH_MOBILE_GUI
+	/* Android: the app thread blocks right after this event (SDL_HINT_ANDROID_BLOCK_ON_PAUSE), so it must
+	 * be handled in a watch. Watches run inside SDL_PollEvent, i.e. in PollEvent() with the game state locked. */
+	SDL_AddEventWatch([](void *, SDL_Event *ev) -> bool {
+		if (ev->type == SDL_EVENT_WILL_ENTER_BACKGROUND) Touch::SaveForResume();
+		return true;
+	}, nullptr);
+
 	if (this->sdl_window != nullptr) {
 #	ifdef __ANDROID__
 		/* Android reports its display density (dpi / 160) as the window's display scale. */
@@ -668,6 +676,10 @@ bool VideoDriver_SDL_Base::PollEvent()
 		}
 
 #ifdef WITH_MOBILE_GUI
+		case SDL_EVENT_WINDOW_HIDDEN: // Web: tab hidden / browser minimised
+			Touch::SaveForResume();
+			break;
+
 		case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
 			UpdateSafeArea(this->sdl_window);
 			break;

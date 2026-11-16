@@ -6,7 +6,7 @@
 //   env VW/VH viewport size in CSS px (default 915x412 = landscape phone; 412x915 = portrait)
 //
 // steps: [{"wait":ms} | {"tap":[x,y]} | {"long":[x,y]} | {"drag":[x1,y1,x2,y2]} | {"flick":[x1,y1,x2,y2]}
-//         | {"pinch":[cx,cy,d1,d2]} | {"resize":[w,h]} | {"shot":"name"}]
+//         | {"pinch":[cx,cy,d1,d2]} | {"resize":[w,h]} | {"js":"code"} | {"reload":"game args"} | {"shot":"name"}]
 // Prints console errors at the end; screenshots go to <outdir>/<name>.png.
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -14,8 +14,9 @@ const fs = require('fs');
 (async () => {
 	const [out, stepsFile] = process.argv.slice(2);
 	const steps = JSON.parse(fs.readFileSync(stepsFile, 'utf8'));
-	let url = process.env.URL || 'http://127.0.0.1:8765/openttd.html';
-	if (process.env.ARGS) url += (url.includes('?') ? '&' : '?') + 'args=' + encodeURIComponent(process.env.ARGS);
+	const base = process.env.URL || 'http://127.0.0.1:8765/openttd.html';
+	const withArgs = args => args ? base + (base.includes('?') ? '&' : '?') + 'args=' + encodeURIComponent(args) : base;
+	const url = withArgs(process.env.ARGS);
 
 	const browser = await chromium.launch();
 	const ctx = await browser.newContext({ viewport: { width: +(process.env.VW || 915), height: +(process.env.VH || 412) }, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
@@ -47,6 +48,8 @@ const fs = require('fs');
 			await touch('touchEnd', []);
 			await sleep(500);
 		}
+		if (s.js) await page.evaluate(s.js);
+		if (s.reload !== undefined) await page.goto(withArgs(s.reload));
 		if (s.resize) { await page.setViewportSize({ width: s.resize[0], height: s.resize[1] }); await sleep(1500); }
 		if (s.shot) await page.screenshot({ path: `${out}/${s.shot}.png` });
 	}

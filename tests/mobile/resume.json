@@ -1,0 +1,6 @@
+[{"wait":22000},{"tap":[206,400]},{"wait":600},
+ {"tap":[41,873]},{"wait":800},{"tap":[88,872]},{"wait":900},{"tap":[123,824]},{"wait":500},
+ {"drag":[100,300,330,300]},{"wait":800},{"tap":[308,775]},{"wait":1500},{"shot":"01-built"},
+ {"js":"Object.defineProperty(document,'hidden',{configurable:true,get:()=>true}); Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>'hidden'}); document.dispatchEvent(new Event('visibilitychange'));"},
+ {"wait":4000},
+ {"reload":""},{"wait":25000},{"shot":"02-resumed"}]

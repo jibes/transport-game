@@ -86,6 +86,10 @@
 #	include <emscripten/html5.h>
 #endif
 
+#ifdef WITH_MOBILE_GUI
+#	include "mobile/lifecycle.h"
+#endif
+
 #include "safeguards.h"
 
 void CallLandscapeTick();
@@ -790,6 +794,9 @@ int openttd_main(std::span<std::string_view> arguments)
 
 	GenerateWorld(GWM_EMPTY, 64, 64); // Make the viewport initialization happy
 	LoadIntroGame(false);
+#ifdef WITH_MOBILE_GUI
+	Touch::TryResume(); // phones: continue where the app was stopped
+#endif
 
 	/* ScanNewGRFFiles now has control over the scanner. */
 	RequestNewGRFScan(scanner.release());
@@ -1145,6 +1152,9 @@ void SwitchToMode(SwitchMode new_mode)
 			break;
 
 		case SwitchMode::Menu: // Switch to game intro menu
+#ifdef WITH_MOBILE_GUI
+			Touch::ForgetResume(); // left the game deliberately
+#endif
 			LoadIntroGame();
 			if (BaseSounds::ini_set.empty() && BaseSounds::GetUsedSet()->fallback && SoundDriver::GetInstance()->HasOutput()) {
 				ShowErrorMessage(GetEncodedString(STR_WARNING_FALLBACK_SOUNDSET), {}, WarningLevel::Critical);
