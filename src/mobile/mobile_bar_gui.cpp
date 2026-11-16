@@ -18,6 +18,7 @@
 #include "touch_input.h"
 #include "build_palette_gui.h"
 #include "problems_gui.h"
+#include "tutorial_gui.h"
 #include "../window_gui.h"
 #include "../window_func.h"
 #include "../gfx_func.h"
@@ -316,6 +317,7 @@ void ShowMobileBar()
 	if (_game_mode != GameMode::Normal) return;
 	if (FindWindowById(WindowClass::MobileBar, 0) != nullptr) return;
 	new MobileBarWindow(_mobile_bar_desc);
+	Touch::MaybeShowGuide();
 }
 
 void RepositionMobileBar()
@@ -385,6 +387,7 @@ bool IsSheetWindow(WindowClass cls)
 		case WindowClass::News:
 		case WindowClass::Bootstrap:
 		case WindowClass::SelectGame: // the main menu centres itself over the title animation
+		case WindowClass::MobileGuide: // a banner at the top
 			return false;
 		default:
 			return true;

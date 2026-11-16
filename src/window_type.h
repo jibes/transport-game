@@ -791,6 +791,12 @@ enum class WindowClass : uint16_t {
 	 */
 	MobileStationSheet,
 
+	/**
+	 * Mobile first-game guide banner (src/mobile); %Window numbers:
+	 *   - 0 = #GuideWidgets
+	 */
+	MobileGuide,
+
 	Invalid = 0xFFFF, ///< Invalid window.
 };
 

@@ -912,6 +912,12 @@ STR_MOBILE_STOPS_HINT                                           :Tap stations on
 STR_MOBILE_STOPS_ENTRY                                          :{NUM}. {STATION}
 STR_MOBILE_STOPS_REMOVE_LAST                                    :Remove last
 STR_MOBILE_STOPS_DONE                                           :Done
+STR_MOBILE_GUIDE_STEP                                           :{BLACK}{NUM}/{NUM}: {STRING}
+STR_MOBILE_GUIDE_STEP_STATIONS                                  :Build two stations - Build, Railway, Station
+STR_MOBILE_GUIDE_STEP_CONNECT                                   :Connect them - Railway, Route, tap both stations
+STR_MOBILE_GUIDE_STEP_TRAIN                                     :Add a depot, tap it, Buy a train
+STR_MOBILE_GUIDE_STEP_STOPS                                     :Tap the train: Stops, then Start/Stop
+STR_MOBILE_GUIDE_DONE                                           :{BLACK}Your first line runs. Watch its profit on its card.
 STR_MOBILE_STATION_SIZE                                         :{WHITE}{COMMA} track{P "" s}, {COMMA} tile{P "" s} long - tap the map to place
 STR_MOBILE_STATION_ROTATE                                       :Rotate
 STR_MOBILE_STATION_TRACKS_LESS                                  :- Track

@@ -18,6 +18,8 @@ add_files(
     station_sheet_gui.cpp
     station_sheet_gui.h
     touch_input.cpp
+    tutorial_gui.cpp
+    tutorial_gui.h
     touch_input.h
     CONDITION ANDROID OR EMSCRIPTEN
 )
