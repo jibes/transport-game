@@ -785,6 +785,12 @@ enum class WindowClass : uint16_t {
 	 */
 	MobileProblems,
 
+	/**
+	 * Mobile rail station controls (src/mobile); %Window numbers:
+	 *   - 0 = #StationSheetWidgets
+	 */
+	MobileStationSheet,
+
 	Invalid = 0xFFFF, ///< Invalid window.
 };
 

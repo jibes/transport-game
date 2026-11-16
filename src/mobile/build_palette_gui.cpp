@@ -19,6 +19,7 @@
 #include "mobile_bar_gui.h"
 #include "touch_input.h"
 #include "route_gui.h"
+#include "station_sheet_gui.h"
 #include "../window_gui.h"
 #include "../window_func.h"
 #include "../gfx_func.h"
@@ -320,6 +321,7 @@ struct BuildPaletteWindow : Window {
 			return;
 		}
 		ParkToolbar(const_cast<Window *>(rt));
+		if (_palette_mode == PaletteMode::Rail) Touch::SyncStationSheet(const_cast<Window *>(rt));
 		this->SyncLowered();
 	}
 

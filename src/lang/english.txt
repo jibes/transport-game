@@ -912,6 +912,12 @@ STR_MOBILE_STOPS_HINT                                           :Tap stations on
 STR_MOBILE_STOPS_ENTRY                                          :{NUM}. {STATION}
 STR_MOBILE_STOPS_REMOVE_LAST                                    :Remove last
 STR_MOBILE_STOPS_DONE                                           :Done
+STR_MOBILE_STATION_SIZE                                         :{WHITE}{COMMA} track{P "" s}, {COMMA} tile{P "" s} long - tap the map to place
+STR_MOBILE_STATION_ROTATE                                       :Rotate
+STR_MOBILE_STATION_TRACKS_LESS                                  :- Track
+STR_MOBILE_STATION_TRACKS_MORE                                  :+ Track
+STR_MOBILE_STATION_LENGTH_LESS                                  :- Length
+STR_MOBILE_STATION_LENGTH_MORE                                  :+ Length
 STR_MOBILE_PROBLEMS_CAPTION                                     :{COMMA} problem{P "" s}
 STR_MOBILE_PROBLEMS_NONE                                        :No problems
 STR_MOBILE_PROBLEM_LOST                                         :{VEHICLE} cannot find its way

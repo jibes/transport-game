@@ -15,6 +15,8 @@ add_files(
     route_gui.h
     route_planner.cpp
     route_planner.h
+    station_sheet_gui.cpp
+    station_sheet_gui.h
     touch_input.cpp
     touch_input.h
     CONDITION ANDROID OR EMSCRIPTEN
