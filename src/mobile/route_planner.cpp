@@ -22,6 +22,7 @@
 #include "../command_func.h"
 #include "../rail_cmd.h"
 #include "../rail_map.h"
+#include "../station_map.h"
 #include "../track_func.h"
 #include "../tile_map.h"
 #include "../map_func.h"
@@ -98,6 +99,11 @@ RoutePlan PlanRailRoute(TileIndex from, TileIndex to, RailType railtype, RouteSt
 		Money c;
 		if (IsPlainRailTile(t) && GetTileOwner(t) == _local_company && HasTrack(t, track)) {
 			c = 0;
+		} else if (IsRailStationTile(t) || IsRailDepotTile(t)) {
+			/* Own station platforms and depot entries are track along their axis; never build there. */
+			bool own = GetTileOwner(t) == _local_company;
+			Track along = IsRailStationTile(t) ? GetRailStationTrack(t) : GetRailDepotTrack(t);
+			c = (own && along == track) ? Money(0) : Money(-1);
 		} else {
 			CommandCost res = Command<Commands::BuildRail>::Do(DoCommandFlags{}, t, railtype, track, false);
 			c = res.Succeeded() ? std::max<Money>(res.GetCost(), 1) : Money(-1);

@@ -893,6 +893,7 @@ STR_MOBILE_CARD_ORDERS                                          :Orders
 STR_MOBILE_CARD_BUY                                             :Buy
 STR_MOBILE_CARD_MORE                                            :More…
 STR_MOBILE_CARD_DEPOT                                           :Depot
+STR_MOBILE_CARD_DEPOT_VEHICLE                                   :Vehicle inside
 STR_MOBILE_CARD_RUNNING                                         :{GREEN}Running, {VELOCITY}
 STR_MOBILE_CARD_STOPPED                                         :{RED}Stopped
 STR_MOBILE_CARD_PROFIT                                          :{BLACK}Profit this year {CURRENCY_LONG}, last year {CURRENCY_LONG}
@@ -902,6 +903,15 @@ STR_MOBILE_CARD_IN_DEPOT                                        :{BLACK}{COMMA} 
 STR_MOBILE_CARD_POPULATION                                      :{BLACK}Population {COMMA}
 STR_MOBILE_CARD_PRODUCED                                        :{BLACK}{CARGO_LONG} last month, {COMMA}% transported
 STR_MOBILE_CARD_PRODUCES_NOTHING                                :{BLACK}Produces nothing
+STR_MOBILE_CARD_STOPS                                           :Stops
+STR_MOBILE_CARD_WAGON_REMOVE                                    :– Wagon
+STR_MOBILE_CARD_WAGON_ADD                                       :+ Wagon
+STR_MOBILE_CARD_WAGONS                                          :{BLACK}Wagons: {COMMA}
+STR_MOBILE_STOPS_CAPTION                                        :Stops of {VEHICLE}
+STR_MOBILE_STOPS_HINT                                           :Tap stations on the map, in order
+STR_MOBILE_STOPS_ENTRY                                          :{NUM}. {STATION}
+STR_MOBILE_STOPS_REMOVE_LAST                                    :Remove last
+STR_MOBILE_STOPS_DONE                                           :Done
 STR_MOBILE_TOOL_TRACK                                           :Track
 STR_MOBILE_TOOL_STATION                                         :Station
 STR_MOBILE_TOOL_DEPOT                                           :Depot

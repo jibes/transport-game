@@ -104,6 +104,7 @@
 #	include "mobile/touch_input.h"
 #	include "mobile/card_gui.h"
 #	include "mobile/route_gui.h"
+#	include "mobile/orders_gui.h"
 #endif
 
 #include "safeguards.h"
@@ -2525,6 +2526,7 @@ bool HandleViewportClicked(const Viewport &vp, int x, int y)
 #ifdef WITH_MOBILE_GUI
 	/* Touch: a card with information and big actions instead of the full window. */
 	if (Touch::HandleRouteTap(vp, x, y)) return true;
+	if (Touch::HandleStopTap(vp, x, y)) return true;
 	if (Touch::AssistsEnabled() && Touch::ShowCardForClick(vp, x, y, v)) return true;
 #endif
 	bool result = CheckClickOnLandscape(vp, x, y);

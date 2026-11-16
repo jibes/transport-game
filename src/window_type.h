@@ -773,6 +773,12 @@ enum class WindowClass : uint16_t {
 	 */
 	MobileRoute,
 
+	/**
+	 * Mobile stop picking sheet (src/mobile); %Window numbers:
+	 *   - 0 = #StopPickWidgets
+	 */
+	MobileStops,
+
 	Invalid = 0xFFFF, ///< Invalid window.
 };
 

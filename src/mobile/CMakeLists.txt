@@ -7,6 +7,8 @@ add_files(
     lifecycle.h
     mobile_bar_gui.cpp
     mobile_bar_gui.h
+    orders_gui.cpp
+    orders_gui.h
     route_gui.cpp
     route_gui.h
     route_planner.cpp

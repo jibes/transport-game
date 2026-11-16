@@ -25,6 +25,9 @@
 #include "../vehicle_gui.h"
 #include "../command_func.h"
 #include "../vehicle_cmd.h"
+#include "../train.h"
+#include "../train_cmd.h"
+#include "orders_gui.h"
 #include "../station_base.h"
 #include "../station_func.h"
 #include "../station_map.h"
@@ -58,7 +61,7 @@ enum CardWidgets : WidgetID {
 };
 
 enum class CardKind : uint8_t { Vehicle, Station, Depot, Town, Industry };
-enum class CardAction : uint8_t { StartStop, ToDepot, Follow, Orders, Centre, Buy, Vehicles, More };
+enum class CardAction : uint8_t { StartStop, ToDepot, Follow, Orders, Stops, Centre, Buy, Vehicles, More, WagonRemove, WagonAdd, DepotTrain };
 
 /** What the current card shows. Kept outside the window so the widget tree can be built from it. */
 struct CardTarget {
@@ -73,18 +76,24 @@ struct CardTarget {
 static CardTarget _card;
 static constexpr int MAX_INFO_LINES = 3;
 
+static const Vehicle *StoppedInDepot(TileIndex tile);
+
 static std::vector<CardAction> ActionsFor(const CardTarget &t)
 {
 	switch (t.kind) {
 		case CardKind::Vehicle: {
 			const Vehicle *v = Vehicle::GetIfValid(t.vehicle);
 			if (v != nullptr && v->owner == _local_company) {
-				return {CardAction::StartStop, CardAction::ToDepot, CardAction::Orders, CardAction::Follow, CardAction::More};
+				return {CardAction::StartStop, CardAction::ToDepot, CardAction::Stops, CardAction::Follow, CardAction::More};
 			}
 			return {CardAction::Follow, CardAction::More};
 		}
 		case CardKind::Station: return {CardAction::Vehicles, CardAction::Centre, CardAction::More};
-		case CardKind::Depot: return {CardAction::Buy, CardAction::Vehicles, CardAction::More};
+		case CardKind::Depot:
+			if (IsValidTile(t.tile) && IsDepotTile(t.tile) && StoppedInDepot(t.tile) != nullptr) {
+				return {CardAction::Buy, CardAction::DepotTrain, CardAction::Vehicles, CardAction::More};
+			}
+			return {CardAction::Buy, CardAction::Vehicles, CardAction::More};
 		case CardKind::Town: return {CardAction::Centre, CardAction::More};
 		case CardKind::Industry: return {CardAction::Centre, CardAction::More};
 	}
@@ -98,12 +107,44 @@ static StringID ActionLabel(CardAction a)
 		case CardAction::ToDepot: return STR_MOBILE_CARD_TO_DEPOT;
 		case CardAction::Follow: return STR_MOBILE_CARD_FOLLOW;
 		case CardAction::Orders: return STR_MOBILE_CARD_ORDERS;
+		case CardAction::Stops: return STR_MOBILE_CARD_STOPS;
+		case CardAction::WagonRemove: return STR_MOBILE_CARD_WAGON_REMOVE;
+		case CardAction::WagonAdd: return STR_MOBILE_CARD_WAGON_ADD;
+		case CardAction::DepotTrain: return STR_MOBILE_CARD_DEPOT_VEHICLE;
 		case CardAction::Centre: return STR_MOBILE_CONTEXT_CENTRE;
 		case CardAction::Buy: return STR_MOBILE_CARD_BUY;
 		case CardAction::Vehicles: return STR_MOBILE_BAR_VEHICLES;
 		case CardAction::More: return STR_MOBILE_CARD_MORE;
 	}
 	NOT_REACHED();
+}
+
+/** Own train standing stopped in a depot: its consist can be edited. */
+static const Train *EditableTrain(const CardTarget &t)
+{
+	if (t.kind != CardKind::Vehicle) return nullptr;
+	const Vehicle *v = Vehicle::GetIfValid(t.vehicle);
+	if (v == nullptr || v->type != VehicleType::Train || v->owner != _local_company) return nullptr;
+	const Train *train = Train::From(v);
+	return train->IsStoppedInDepot() ? train : nullptr;
+}
+
+static uint WagonCount(const Train *t)
+{
+	uint n = 0;
+	for (const Train *u = t; u != nullptr; u = u->Next()) {
+		if (!u->IsEngine() && !u->IsArticulatedPart()) n++;
+	}
+	return n;
+}
+
+/** First own primary vehicle stopped in this depot (it is hidden from the map, so the card links to it). */
+static const Vehicle *StoppedInDepot(TileIndex tile)
+{
+	for (const Vehicle *v : Vehicle::Iterate()) {
+		if (v->IsPrimaryVehicle() && v->owner == _local_company && v->tile == tile && v->IsStoppedInDepot()) return v;
+	}
+	return nullptr;
 }
 
 static VehicleType DepotType(TileIndex tile)
@@ -138,6 +179,7 @@ static std::vector<std::string> CardInfo(const CardTarget &t)
 				lines.push_back(GetString(STR_MOBILE_CARD_RUNNING, PackVelocity(v->GetDisplaySpeed(), v->type)));
 			}
 			lines.push_back(GetString(STR_MOBILE_CARD_PROFIT, v->GetDisplayProfitThisYear(), v->GetDisplayProfitLastYear()));
+			if (const Train *train = EditableTrain(t); train != nullptr) lines.push_back(GetString(STR_MOBILE_CARD_WAGONS, WagonCount(train)));
 			break;
 		}
 		case CardKind::Station: {
@@ -190,25 +232,47 @@ static std::vector<std::string> CardInfo(const CardTarget &t)
 	return lines;
 }
 
+/** Actions in rows: the wagon editor (trains stopped in a depot) gets its own row. */
+static std::vector<std::vector<CardAction>> ActionRowsFor(const CardTarget &t)
+{
+	std::vector<std::vector<CardAction>> rows;
+	if (EditableTrain(t) != nullptr) rows.push_back({CardAction::WagonRemove, CardAction::WagonAdd});
+	rows.push_back(ActionsFor(t));
+	return rows;
+}
+
+static std::vector<CardAction> FlatActions(const CardTarget &t)
+{
+	std::vector<CardAction> all;
+	for (const auto &row : ActionRowsFor(t)) all.insert(all.end(), row.begin(), row.end());
+	return all;
+}
+
 static std::unique_ptr<NWidgetBase> MakeActionRow()
 {
-	auto row = std::make_unique<NWidgetHorizontal>(NWidContainerFlag::EqualSize);
-	std::vector<CardAction> actions = ActionsFor(_card);
-	for (size_t i = 0; i < actions.size(); i++) {
-		auto b = std::make_unique<NWidgetLeaf>(WWT_PUSHTXTBTN, Colours::Grey, WID_CARD_ACTION_FIRST + static_cast<int>(i), WidgetData{.string = ActionLabel(actions[i])}, STR_NULL);
-		b->SetFill(1, 1);
-		b->SetResize(1, 0);
-		row->Add(std::move(b));
+	auto rows = std::make_unique<NWidgetVertical>();
+	int id = WID_CARD_ACTION_FIRST;
+	for (const auto &actions : ActionRowsFor(_card)) {
+		auto row = std::make_unique<NWidgetHorizontal>(NWidContainerFlag::EqualSize);
+		for (CardAction a : actions) {
+			auto b = std::make_unique<NWidgetLeaf>(WWT_PUSHTXTBTN, Colours::Grey, id++, WidgetData{.string = ActionLabel(a)}, STR_NULL);
+			b->SetFill(1, 1);
+			b->SetResize(1, 0);
+			row->Add(std::move(b));
+		}
+		rows->Add(std::move(row));
 	}
-	return row;
+	return rows;
 }
+
+static void OpenCard(const CardTarget &t);
 
 struct CardWindow : Window {
 	CardTarget target;
 	std::vector<CardAction> actions;
 	uint refresh_ms = 0;
 
-	CardWindow(WindowDesc &desc) : Window(desc), target(_card), actions(ActionsFor(_card))
+	CardWindow(WindowDesc &desc) : Window(desc), target(_card), actions(FlatActions(_card))
 	{
 		this->InitNested(0);
 		/* Full safe width, like the other sheets: buttons get as much room as possible. */
@@ -274,10 +338,44 @@ struct CardWindow : Window {
 			case CardAction::Orders:
 				if (v != nullptr) ShowOrdersWindow(v);
 				break;
+			case CardAction::Stops:
+				if (v != nullptr) Touch::StartStopPicking(v->index);
+				break;
+			case CardAction::WagonAdd:
+			case CardAction::WagonRemove: {
+				const Train *train = EditableTrain(t);
+				if (train == nullptr) return;
+				const Train *last = Train::From(train->Last());
+				while (last != nullptr && last->IsArticulatedPart()) last = Train::From(last->Previous());
+				if (this->actions[widget - WID_CARD_ACTION_FIRST] == CardAction::WagonRemove) {
+					if (last != nullptr && last != train && !last->IsEngine()) {
+						Command<Commands::SellVehicle>::Post(STR_ERROR_CAN_T_SELL_TRAIN, last->tile, last->index, false, false, ClientID::Invalid);
+					}
+				} else if (last != nullptr && last != train && !last->IsEngine()) {
+					/* Another wagon like the last one; CcBuildWagon attaches it to this train. */
+					Command<Commands::BuildVehicle>::Post(STR_ERROR_CAN_T_BUY_TRAIN, CcBuildWagon, train->tile, last->engine_type, true, last->cargo_type, ClientID::Invalid);
+				} else {
+					/* No wagon yet: choose one in the purchase list. */
+					ShowBuildVehicleWindow(train->tile, VehicleType::Train);
+					break;
+				}
+				this->SetDirty();
+				return;
+			}
 			case CardAction::Centre:
 				if (t.kind == CardKind::Station && Station::IsValidID(t.station)) ScrollMainWindowToTile(Station::Get(t.station)->xy);
 				if (t.kind == CardKind::Town && Town::IsValidID(t.town)) ScrollMainWindowToTile(Town::Get(t.town)->xy);
 				if (t.kind == CardKind::Industry && Industry::IsValidID(t.industry)) ScrollMainWindowToTile(Industry::Get(t.industry)->location.tile);
+				return;
+			case CardAction::DepotTrain:
+				if (IsValidTile(t.tile) && IsDepotTile(t.tile)) {
+					if (const Vehicle *inside = StoppedInDepot(t.tile); inside != nullptr) {
+						CardTarget vt;
+						vt.kind = CardKind::Vehicle;
+						vt.vehicle = inside->index;
+						OpenCard(vt); // replaces this card
+					}
+				}
 				return;
 			case CardAction::Buy:
 				if (IsValidTile(t.tile) && IsDepotTile(t.tile)) ShowBuildVehicleWindow(t.tile, DepotType(t.tile));
