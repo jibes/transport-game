@@ -1,4 +1,11 @@
 Module.arguments.push('-mnull', '-snull', '-vsdl');
+/* Extra command line from the page URL, e.g. ?args=-g%20-G%201 starts a new game with seed 1 (used by tests/mobile). */
+(function() {
+	try {
+		const extra = new URLSearchParams(window.location.search).get('args');
+		if (extra) Module.arguments.push(...extra.split(' ').filter(a => a.length > 0));
+	} catch (e) {}
+})();
 Module['websocket'] = { url: function(host, port, proto) {
     /* openttd.org hosts a WebSocket proxy for the content service. */
     if (host == "content.openttd.org" && port == 3978 && proto == "tcp") {
