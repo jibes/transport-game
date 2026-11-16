@@ -48,6 +48,7 @@
 #include "../rail_type.h"
 #include "../road_type.h"
 #include "../zoom_func.h"
+#include "../settings_type.h"
 #include "../table/sprites.h"
 #include "../core/math_func.hpp"
 
@@ -70,7 +71,7 @@ enum MobileBarWidgets : WidgetID {
 	WID_MB_CONTEXT, ///< Not a real widget: id of the long-press map context menu dropdown.
 };
 
-enum class MenuEntry : int { ToggleToolbar, Pause, Save, Load, Settings, ExitToMenu };
+enum class MenuEntry : int { ToggleToolbar, ToggleAssists, Pause, Save, Load, Settings, ExitToMenu };
 enum class ContextEntry : int { Info, Centre, Station, Town, Demolish };
 
 static TileIndex _context_tile = INVALID_TILE; ///< Tile the long-press context menu was opened on.
@@ -120,6 +121,7 @@ struct MobileBarWindow : Window {
 
 			case WID_MB_MENU:
 				list.push_back(MakeDropDownListStringItem(Touch::IsToolbarHidden() ? STR_MOBILE_MENU_SHOW_TOOLBAR : STR_MOBILE_MENU_HIDE_TOOLBAR, MenuEntry::ToggleToolbar));
+				list.push_back(MakeDropDownListStringItem(Touch::AssistsEnabled() ? STR_MOBILE_MENU_ASSISTS_ON : STR_MOBILE_MENU_ASSISTS_OFF, MenuEntry::ToggleAssists));
 				list.push_back(MakeDropDownListStringItem(_pause_mode.Any() ? STR_MOBILE_MENU_RESUME : STR_MOBILE_MENU_PAUSE, MenuEntry::Pause));
 				list.push_back(MakeDropDownListStringItem(STR_MOBILE_MENU_SAVE, MenuEntry::Save));
 				list.push_back(MakeDropDownListStringItem(STR_MOBILE_MENU_LOAD, MenuEntry::Load));
@@ -159,6 +161,9 @@ struct MobileBarWindow : Window {
 				switch (static_cast<MenuEntry>(index)) {
 					case MenuEntry::ToggleToolbar:
 						Touch::SetToolbarHidden(!Touch::IsToolbarHidden());
+						break;
+					case MenuEntry::ToggleAssists:
+						_settings_client.gui.mobile_assists = !_settings_client.gui.mobile_assists;
 						break;
 					case MenuEntry::Pause:
 						if (_networking && !_network_server) break; // only the server can pause

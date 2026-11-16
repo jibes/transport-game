@@ -147,6 +147,12 @@ bool IsTouchUsed()
 	return _touch_used;
 }
 
+/** Guided play (default): cards, build confirmation and route planning. Classic: the game's own windows. */
+bool AssistsEnabled()
+{
+	return _touch_used && _settings_client.gui.mobile_assists;
+}
+
 /**
  * Size of a tappable control in screen pixels: 48dp, the smallest reliable finger target.
  * Independent of the GUI scale, so information can stay compact while actions stay big.
@@ -598,7 +604,7 @@ static void HandleUp(const FingerEvent &ev)
 	_fingers.erase(_fingers.begin() + (f - _fingers.data()));
 	if (!_fingers.empty()) return; // lifting one of several fingers keeps the gesture until all are up
 
-	if (_state == State::Dragging && IsToolDrag()) {
+	if (_state == State::Dragging && IsToolDrag() && AssistsEnabled()) {
 		if (cancelled) {
 			VpCancelPlaceSizingDrag();
 			Release(ControlInput::Left);

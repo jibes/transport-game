@@ -2517,7 +2517,7 @@ bool HandleViewportClicked(const Viewport &vp, int x, int y)
 	if (CheckClickOnViewportSign(vp, x, y)) return true;
 #ifdef WITH_MOBILE_GUI
 	/* Touch: a card with information and big actions instead of the full window. */
-	if (Touch::IsTouchUsed() && Touch::ShowCardForClick(vp, x, y, v)) return true;
+	if (Touch::AssistsEnabled() && Touch::ShowCardForClick(vp, x, y, v)) return true;
 #endif
 	bool result = CheckClickOnLandscape(vp, x, y);
 

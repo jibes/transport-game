@@ -871,6 +871,8 @@ STR_MOBILE_VEHICLES_SHIPS                                       :Ships
 STR_MOBILE_VEHICLES_AIRCRAFT                                    :Aircraft
 STR_MOBILE_MENU_SHOW_TOOLBAR                                    :Show toolbar
 STR_MOBILE_MENU_HIDE_TOOLBAR                                    :Hide toolbar
+STR_MOBILE_MENU_ASSISTS_ON                                      :Assists: Guided (tap for Classic)
+STR_MOBILE_MENU_ASSISTS_OFF                                     :Assists: Classic (tap for Guided)
 STR_MOBILE_MENU_PAUSE                                           :Pause
 STR_MOBILE_MENU_RESUME                                          :Resume
 STR_MOBILE_MENU_SAVE                                            :Save game
