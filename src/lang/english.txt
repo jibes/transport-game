@@ -884,6 +884,22 @@ STR_MOBILE_CONTEXT_CENTRE                                       :Centre here
 STR_MOBILE_CONTEXT_STATION                                      :Station details
 STR_MOBILE_CONTEXT_TOWN                                         :Town details
 STR_MOBILE_CONTEXT_DEMOLISH                                     :Demolish
+STR_MOBILE_CARD_START_STOP                                      :Start/Stop
+STR_MOBILE_CARD_TO_DEPOT                                        :To depot
+STR_MOBILE_CARD_FOLLOW                                          :Follow
+STR_MOBILE_CARD_ORDERS                                          :Orders
+STR_MOBILE_CARD_BUY                                             :Buy
+STR_MOBILE_CARD_MORE                                            :More…
+STR_MOBILE_CARD_DEPOT                                           :Depot
+STR_MOBILE_CARD_RUNNING                                         :{GREEN}Running, {VELOCITY}
+STR_MOBILE_CARD_STOPPED                                         :{RED}Stopped
+STR_MOBILE_CARD_PROFIT                                          :{BLACK}Profit this year {CURRENCY_LONG}, last year {CURRENCY_LONG}
+STR_MOBILE_CARD_WAITING                                         :{BLACK}{CARGO_LONG} waiting
+STR_MOBILE_CARD_NOTHING_WAITING                                 :{BLACK}No cargo waiting
+STR_MOBILE_CARD_IN_DEPOT                                        :{BLACK}{COMMA} vehicle{P "" s} inside
+STR_MOBILE_CARD_POPULATION                                      :{BLACK}Population {COMMA}
+STR_MOBILE_CARD_PRODUCED                                        :{BLACK}{CARGO_LONG} last month, {COMMA}% transported
+STR_MOBILE_CARD_PRODUCES_NOTHING                                :{BLACK}Produces nothing
 STR_MOBILE_TOOL_TRACK                                           :Track
 STR_MOBILE_TOOL_STATION                                         :Station
 STR_MOBILE_TOOL_DEPOT                                           :Depot

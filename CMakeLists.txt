@@ -381,10 +381,12 @@ if(EMSCRIPTEN)
     target_link_libraries(WASM::WASM INTERFACE "-s INITIAL_MEMORY=33554432")
     target_link_libraries(WASM::WASM INTERFACE "-s DISABLE_EXCEPTION_CATCHING=0")
     target_link_libraries(WASM::WASM INTERFACE "-s WASM_BIGINT")
+    # Readable C++ exception messages in the browser console (tests/mobile prints them).
+    target_link_libraries(WASM::WASM INTERFACE "-s EXPORT_EXCEPTION_HANDLING_HELPERS")
     add_definitions(-s DISABLE_EXCEPTION_CATCHING=0)
 
     # Export functions to Javascript.
-    target_link_libraries(WASM::WASM INTERFACE "-s EXPORTED_FUNCTIONS='[\"_main\", \"_em_openttd_add_server\"]' -s EXPORTED_RUNTIME_METHODS='[\"cwrap\", \"HEAPU8\"]'")
+    target_link_libraries(WASM::WASM INTERFACE "-s EXPORTED_FUNCTIONS='[\"_main\", \"_em_openttd_add_server\"]' -s EXPORTED_RUNTIME_METHODS='[\"cwrap\", \"HEAPU8\", \"getExceptionMessage\"]'")
 
     # Preload all the files we generate during build.
     # As we do not compile with FreeType / FontConfig, we also have no way to

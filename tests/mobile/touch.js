@@ -25,6 +25,17 @@ const fs = require('fs');
 	page.on('console', m => logs.push(m.text()));
 	page.on('pageerror', e => logs.push('PAGEERROR ' + e.message));
 	const cdp = await ctx.newCDPSession(page);
+	/* Uncaught C++ exceptions: log type and message (needs -sEXPORT_EXCEPTION_HANDLING_HELPERS). */
+	await cdp.send('Runtime.enable');
+	cdp.on('Runtime.exceptionThrown', async ev => {
+		const id = ev.exceptionDetails.exception && ev.exceptionDetails.exception.objectId;
+		if (!id) return;
+		try {
+			const r = await cdp.send('Runtime.callFunctionOn', { objectId: id, returnByValue: true,
+				functionDeclaration: 'function() { try { const f = (typeof getExceptionMessage === "function") ? getExceptionMessage : Module.getExceptionMessage; return f(this).join(": "); } catch (e) { return String(e); } }' });
+			logs.push('EXCEPTION ' + r.result.value);
+		} catch (e) {}
+	});
 	const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((q, i) => ({ x: q[0], y: q[1], id: i })) });
 	const sleep = ms => new Promise(r => setTimeout(r, ms));
 	const move = async (x1, y1, x2, y2, n, dt) => {

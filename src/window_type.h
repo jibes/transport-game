@@ -761,6 +761,12 @@ enum class WindowClass : uint16_t {
 	 */
 	MobilePalette,
 
+	/**
+	 * Mobile tap-to-select card (src/mobile); %Window numbers:
+	 *   - 0 = #CardWidgets
+	 */
+	MobileCard,
+
 	Invalid = 0xFFFF, ///< Invalid window.
 };
 
