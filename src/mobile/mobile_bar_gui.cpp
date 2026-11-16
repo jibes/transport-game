@@ -17,6 +17,7 @@
 #include "mobile_bar_gui.h"
 #include "touch_input.h"
 #include "build_palette_gui.h"
+#include "problems_gui.h"
 #include "../window_gui.h"
 #include "../window_func.h"
 #include "../gfx_func.h"
@@ -48,6 +49,7 @@
 #include "../rail_type.h"
 #include "../road_type.h"
 #include "../zoom_func.h"
+#include "../strings_func.h"
 #include "../settings_type.h"
 #include "../table/sprites.h"
 #include "../core/math_func.hpp"
@@ -71,7 +73,7 @@ enum MobileBarWidgets : WidgetID {
 	WID_MB_CONTEXT, ///< Not a real widget: id of the long-press map context menu dropdown.
 };
 
-enum class MenuEntry : int { ToggleToolbar, ToggleAssists, Pause, Save, Load, Settings, ExitToMenu };
+enum class MenuEntry : int { Problems, CargoFlow, ToggleToolbar, ToggleAssists, Pause, Save, Load, Settings, ExitToMenu };
 enum class ContextEntry : int { Info, Centre, Station, Town, Demolish };
 
 static TileIndex _context_tile = INVALID_TILE; ///< Tile the long-press context menu was opened on.
@@ -120,6 +122,8 @@ struct MobileBarWindow : Window {
 				return;
 
 			case WID_MB_MENU:
+				list.push_back(MakeDropDownListStringItem(GetString(STR_MOBILE_MENU_PROBLEMS, Touch::CountProblems()), to_underlying(MenuEntry::Problems)));
+				list.push_back(MakeDropDownListStringItem(Touch::IsCargoFlowShown() ? STR_MOBILE_MENU_CARGO_FLOW_ON : STR_MOBILE_MENU_CARGO_FLOW_OFF, MenuEntry::CargoFlow));
 				list.push_back(MakeDropDownListStringItem(Touch::IsToolbarHidden() ? STR_MOBILE_MENU_SHOW_TOOLBAR : STR_MOBILE_MENU_HIDE_TOOLBAR, MenuEntry::ToggleToolbar));
 				list.push_back(MakeDropDownListStringItem(Touch::AssistsEnabled() ? STR_MOBILE_MENU_ASSISTS_ON : STR_MOBILE_MENU_ASSISTS_OFF, MenuEntry::ToggleAssists));
 				list.push_back(MakeDropDownListStringItem(_pause_mode.Any() ? STR_MOBILE_MENU_RESUME : STR_MOBILE_MENU_PAUSE, MenuEntry::Pause));
@@ -159,6 +163,12 @@ struct MobileBarWindow : Window {
 
 			case WID_MB_MENU:
 				switch (static_cast<MenuEntry>(index)) {
+					case MenuEntry::Problems:
+						Touch::ShowProblems();
+						break;
+					case MenuEntry::CargoFlow:
+						Touch::ToggleCargoFlow();
+						break;
 					case MenuEntry::ToggleToolbar:
 						Touch::SetToolbarHidden(!Touch::IsToolbarHidden());
 						break;

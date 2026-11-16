@@ -912,6 +912,15 @@ STR_MOBILE_STOPS_HINT                                           :Tap stations on
 STR_MOBILE_STOPS_ENTRY                                          :{NUM}. {STATION}
 STR_MOBILE_STOPS_REMOVE_LAST                                    :Remove last
 STR_MOBILE_STOPS_DONE                                           :Done
+STR_MOBILE_PROBLEMS_CAPTION                                     :{COMMA} problem{P "" s}
+STR_MOBILE_PROBLEMS_NONE                                        :No problems
+STR_MOBILE_PROBLEM_LOST                                         :{VEHICLE} cannot find its way
+STR_MOBILE_PROBLEM_UNPROFITABLE                                 :{VEHICLE} lost {CURRENCY_SHORT} last year
+STR_MOBILE_PROBLEM_OLD                                          :{VEHICLE} is getting old
+STR_MOBILE_PROBLEM_PILING_UP                                    :{STATION}: {COMMA} waiting
+STR_MOBILE_MENU_PROBLEMS                                        :Problems ({COMMA})
+STR_MOBILE_MENU_CARGO_FLOW_ON                                   :Hide cargo flow
+STR_MOBILE_MENU_CARGO_FLOW_OFF                                  :Show cargo flow
 STR_MOBILE_TOOL_TRACK                                           :Track
 STR_MOBILE_TOOL_STATION                                         :Station
 STR_MOBILE_TOOL_DEPOT                                           :Depot

@@ -483,4 +483,22 @@ bool ShowCardForClick(const Viewport &vp, int x, int y, const Vehicle *v)
 	return true;
 }
 
+void ShowVehicleCard(VehicleID vehicle)
+{
+	if (!Vehicle::IsValidID(vehicle)) return;
+	CardTarget t;
+	t.kind = CardKind::Vehicle;
+	t.vehicle = vehicle;
+	OpenCard(t);
+}
+
+void ShowStationCard(StationID station)
+{
+	if (!Station::IsValidID(station)) return;
+	CardTarget t;
+	t.kind = CardKind::Station;
+	t.station = station;
+	OpenCard(t);
+}
+
 } // namespace Touch

@@ -12,6 +12,7 @@
 
 #include "../viewport_type.h"
 #include "../vehicle_type.h"
+#include "../station_type.h"
 
 namespace Touch {
 
@@ -20,6 +21,8 @@ namespace Touch {
  * @return Whether a card was shown; otherwise the game handles the click as usual.
  */
 bool ShowCardForClick(const Viewport &vp, int x, int y, const Vehicle *v);
+void ShowVehicleCard(VehicleID vehicle);
+void ShowStationCard(StationID station);
 
 } // namespace Touch
 

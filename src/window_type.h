@@ -779,6 +779,12 @@ enum class WindowClass : uint16_t {
 	 */
 	MobileStops,
 
+	/**
+	 * Mobile problems inbox (src/mobile); %Window numbers:
+	 *   - 0 = #ProblemsWidgets
+	 */
+	MobileProblems,
+
 	Invalid = 0xFFFF, ///< Invalid window.
 };
 

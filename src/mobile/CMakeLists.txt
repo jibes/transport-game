@@ -9,6 +9,8 @@ add_files(
     mobile_bar_gui.h
     orders_gui.cpp
     orders_gui.h
+    problems_gui.cpp
+    problems_gui.h
     route_gui.cpp
     route_gui.h
     route_planner.cpp
