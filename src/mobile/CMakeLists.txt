@@ -7,6 +7,10 @@ add_files(
     lifecycle.h
     mobile_bar_gui.cpp
     mobile_bar_gui.h
+    route_gui.cpp
+    route_gui.h
+    route_planner.cpp
+    route_planner.h
     touch_input.cpp
     touch_input.h
     CONDITION ANDROID OR EMSCRIPTEN

@@ -18,6 +18,7 @@
 #include "build_palette_gui.h"
 #include "mobile_bar_gui.h"
 #include "touch_input.h"
+#include "route_gui.h"
 #include "../window_gui.h"
 #include "../window_func.h"
 #include "../gfx_func.h"
@@ -61,7 +62,11 @@ struct PaletteTool {
 };
 
 /** Most used tools per mode; rarer ones (fixed-direction pieces, conversion) stay in the full toolbar. */
+/** Pseudo toolbar widget: the touch route planner (not part of the rail toolbar). */
+static constexpr WidgetID ROUTE_TOOL = -2;
+
 static constexpr PaletteTool RAIL_TOOLS[] = {
+	{ROUTE_TOOL, STR_MOBILE_TOOL_ROUTE},
 	{WID_RAT_AUTORAIL, STR_MOBILE_TOOL_TRACK},
 	{WID_RAT_BUILD_STATION, STR_MOBILE_TOOL_STATION},
 	{WID_RAT_BUILD_DEPOT, STR_MOBILE_TOOL_DEPOT},
@@ -244,6 +249,10 @@ struct BuildPaletteWindow : Window {
 			for (int i = 0; i < NumTools(); i++) this->GetWidget<NWidgetCore>(WID_BP_TOOL_FIRST + i)->SetSprite(MenuRowSprite(i));
 		} else if (const Window *rt = GetToolbar(); rt != nullptr) {
 			for (int i = 0; i < NumTools(); i++) {
+				if (CurrentKind().tools[i].toolbar_widget == ROUTE_TOOL) {
+					this->GetWidget<NWidgetCore>(WID_BP_TOOL_FIRST + i)->SetSprite(SPR_IMG_SHOW_ROUTES);
+					continue;
+				}
 				const NWidgetCore *src = rt->GetWidget<NWidgetCore>(CurrentKind().tools[i].toolbar_widget);
 				if (src != nullptr) this->GetWidget<NWidgetCore>(WID_BP_TOOL_FIRST + i)->SetSprite(src->GetSprite());
 			}
@@ -291,7 +300,13 @@ struct BuildPaletteWindow : Window {
 		}
 		Window *rt = GetToolbar();
 		if (rt == nullptr) return;
-		rt->OnClick({0, 0}, CurrentKind().tools[widget - WID_BP_TOOL_FIRST].toolbar_widget, click_count);
+		WidgetID tool = CurrentKind().tools[widget - WID_BP_TOOL_FIRST].toolbar_widget;
+		if (tool == ROUTE_TOOL) {
+			Touch::StartRoutePlanning(_last_built_railtype);
+			this->SyncLowered();
+			return;
+		}
+		rt->OnClick({0, 0}, tool, click_count);
 		this->SyncLowered();
 	}
 
@@ -314,7 +329,8 @@ struct BuildPaletteWindow : Window {
 		const Window *rt = GetToolbar();
 		if (rt == nullptr) return;
 		for (int i = 0; i < NumTools(); i++) {
-			bool lowered = rt->IsWidgetLowered(CurrentKind().tools[i].toolbar_widget);
+			WidgetID tool = CurrentKind().tools[i].toolbar_widget;
+			bool lowered = tool == ROUTE_TOOL ? Touch::IsRoutePlanning() : rt->IsWidgetLowered(tool);
 			if (this->IsWidgetLowered(WID_BP_TOOL_FIRST + i) != lowered) {
 				this->SetWidgetLoweredState(WID_BP_TOOL_FIRST + i, lowered);
 				this->SetWidgetDirty(WID_BP_TOOL_FIRST + i);
@@ -370,9 +386,13 @@ static WindowDesc _build_palette_desc(
 
 } // namespace
 
-/** Full safe width, in the bottom action row (the navigation steps aside while a palette is open). */
+/**
+ * Full safe width, in the bottom action row (the navigation steps aside while a palette is open).
+ * While a route is being planned, the route sheet takes the row and the palette steps aside too.
+ */
 Point GetBuildPalettePosition([[maybe_unused]] int width, int height)
 {
+	if (FindWindowById(WindowClass::MobileRoute, 0) != nullptr) return {Touch::GetSafeInsets().left, _screen.height + 1};
 	return {Touch::GetSafeInsets().left, GetActionRowBottom() - height};
 }
 

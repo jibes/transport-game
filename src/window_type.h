@@ -767,6 +767,12 @@ enum class WindowClass : uint16_t {
 	 */
 	MobileCard,
 
+	/**
+	 * Mobile route planner sheet (src/mobile); %Window numbers:
+	 *   - 0 = #RouteWidgets
+	 */
+	MobileRoute,
+
 	Invalid = 0xFFFF, ///< Invalid window.
 };
 

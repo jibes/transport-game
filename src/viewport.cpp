@@ -103,6 +103,7 @@
 #ifdef WITH_MOBILE_GUI
 #	include "mobile/touch_input.h"
 #	include "mobile/card_gui.h"
+#	include "mobile/route_gui.h"
 #endif
 
 #include "safeguards.h"
@@ -1869,6 +1870,12 @@ void ViewportDoDraw(const Viewport &vp, int left, int top, int right, int bottom
 		vp.overlay->Draw(&dp);
 	}
 
+#ifdef WITH_MOBILE_GUI
+	dp.left = x;
+	dp.top = y;
+	Touch::DrawRouteOverlay(vp, &dp);
+#endif
+
 	if (!_vd.string_sprites_to_draw.empty()) {
 		/* translate to world coordinates */
 		dp.left = UnScaleByZoom(_vd.dpi.left, zoom);
@@ -2517,6 +2524,7 @@ bool HandleViewportClicked(const Viewport &vp, int x, int y)
 	if (CheckClickOnViewportSign(vp, x, y)) return true;
 #ifdef WITH_MOBILE_GUI
 	/* Touch: a card with information and big actions instead of the full window. */
+	if (Touch::HandleRouteTap(vp, x, y)) return true;
 	if (Touch::AssistsEnabled() && Touch::ShowCardForClick(vp, x, y, v)) return true;
 #endif
 	bool result = CheckClickOnLandscape(vp, x, y);

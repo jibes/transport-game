@@ -911,6 +911,15 @@ STR_MOBILE_TOOL_TUNNEL                                          :Tunnel
 STR_MOBILE_TOOL_WAYPOINT                                        :Waypoint
 STR_MOBILE_TOOL_DEMOLISH                                        :Demolish
 STR_MOBILE_TOOL_REMOVE                                          :Remove
+STR_MOBILE_TOOL_ROUTE                                           :Route from A to B
+STR_MOBILE_ROUTE_PICK_START                                     :Tap the start of the route
+STR_MOBILE_ROUTE_PICK_END                                       :Tap the end of the route
+STR_MOBILE_ROUTE_CHOOSE                                         :Choose a route
+STR_MOBILE_ROUTE_NONE                                           :No route found - try other points
+STR_MOBILE_ROUTE_CHEAP                                          :Cheapest
+STR_MOBILE_ROUTE_BALANCED                                       :Balanced
+STR_MOBILE_ROUTE_DIRECT                                         :Most direct
+STR_MOBILE_ROUTE_SUMMARY                                        :{CURRENCY_SHORT}, {COMMA} tiles, {COMMA} curve{P "" s}
 STR_MOBILE_TOOL_ROAD                                            :Road
 STR_MOBILE_TOOL_BUS_STOP                                        :Bus stop
 STR_MOBILE_TOOL_LORRY_STOP                                      :Lorry stop
